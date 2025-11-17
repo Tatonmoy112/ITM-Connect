@@ -1,0 +1,23 @@
+name: untitled
+description: A Flutter project for ITM Connect
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_animate: ^2.0.0
+  font_awesome_flutter: ^10.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/ # Add your image assets here if needed
+    - assets/icons/   # Add your icon assets here if needed

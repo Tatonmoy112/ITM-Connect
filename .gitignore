@@ -1,0 +1,37 @@
+﻿# Initialize Git
+git init
+
+# Create a fresh .gitignore (PowerShell-friendly)
+@"
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Flutter / Dart
+**/build/
+.packages
+.pub-cache/
+
+# Temporary files
+*.log
+*.tmp
+"@ | Out-File -Encoding UTF8 .gitignore
+
+# Stage all files
+git add .
+
+# First commit
+git commit -m "Initial commit"
