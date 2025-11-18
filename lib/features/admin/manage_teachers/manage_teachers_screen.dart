@@ -131,16 +131,13 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                         setModalState(() => isLoading = true);
 
                         try {
-                          final newTeacher = Teacher(
-                            id: initial,
+                          await _teacherService.addOrUpdateTeacher(
+                            teacherInitial: initial,
                             name: name,
                             email: email,
                             role: role,
                             imageUrl: imageUrl,
                           );
-
-                          await _teacherService.setTeacher(newTeacher);
-
                           if (mounted) {
                             Navigator.pop(context);
                           }
@@ -148,7 +145,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                           setModalState(() => isLoading = false);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
+                              SnackBar(content: Text('Error: ${e.toString()}')),
                             );
                           }
                         }
@@ -238,11 +235,17 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
           })(),
           child: (teacher.imageUrl.trim().isEmpty)
               ? (() {
-                  final parts = teacher.name.split(' ');
+                  final name = teacher.name.trim();
+                  if (name.isEmpty) {
+                    return const Icon(Icons.person, color: Colors.white, size: 28);
+                  }
+                  final parts = name.split(' ');
                   var initials = '';
-                  if (parts.isNotEmpty) {
+                  if (parts.isNotEmpty && parts[0].isNotEmpty) {
                     initials += parts[0][0];
-                    if (parts.length > 1) initials += parts[parts.length - 1][0];
+                    if (parts.length > 1 && parts.last.isNotEmpty) {
+                      initials += parts.last[0];
+                    }
                   }
                   return Text(initials.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
                 })()
