@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:itm_connect/widgets/app_layout.dart';
 import 'package:itm_connect/features/user/class_routine/class_routine_screen.dart';
 import 'package:itm_connect/features/user/contact/contact_us_screen.dart';
@@ -91,9 +88,36 @@ class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProvid
   }
 }
 
-class ITMDepartmentHomeBody extends StatelessWidget {
+class ITMDepartmentHomeBody extends StatefulWidget {
   final AnimationController bgController;
   const ITMDepartmentHomeBody({super.key, required this.bgController});
+
+  @override
+  State<ITMDepartmentHomeBody> createState() => _ITMDepartmentHomeBodyState();
+}
+
+class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToContent() {
+    _scrollController.animateTo(
+      210,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,347 +128,294 @@ class ITMDepartmentHomeBody extends StatelessWidget {
         // Animated flowing gradient background
         Positioned.fill(
           child: AnimatedBuilder(
-            animation: bgController,
+            animation: widget.bgController,
             builder: (context, child) {
               return Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color.lerp(const Color(0xFF43cea2), const Color(0xFF185a9d), bgController.value)!,
-                      Color.lerp(const Color(0xFFf5f5f5), const Color(0xFFe0f7fa), 1 - bgController.value)!,
-                      Color.lerp(const Color(0xFFe0f7fa), const Color(0xFFf5f5f5), bgController.value)!,
+                      Color.lerp(const Color(0xFF43cea2), const Color(0xFF185a9d), widget.bgController.value)!,
+                      Color.lerp(const Color(0xFFf5f5f5), const Color(0xFFe0f7fa), 1 - widget.bgController.value)!,
+                      Color.lerp(const Color(0xFFe0f7fa), const Color(0xFFf5f5f5), widget.bgController.value)!,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                 ),
                 child: CustomPaint(
-                  painter: _FlowingBackgroundPainter(bgController.value),
+                  painter: _FlowingBackgroundPainter(widget.bgController.value),
                 ),
               );
             },
           ),
         ),
-        // Main content
+        // Main scrollable content
         SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 48.0, horizontal: 0),
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Department Head Speech Section
-              Animate(
-                effects: const [
-                  FadeEffect(duration: Duration(milliseconds: 900)),
-                  SlideEffect(begin: Offset(0, -0.12), end: Offset.zero, duration: Duration(milliseconds: 900)),
-                ],
-                child: Center(
-                  child: GlassCard(
-                    showGlow: true, // Added glow to hero card
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 28,
-                                backgroundImage: AssetImage('assets/images/Ms. Moni Akter.jpg'), // Placeholder image
-                                backgroundColor: Colors.white.withOpacity(0.2),
+              // ============ LAYER 1: TOP BACKGROUND BLOCK (250px cover image) ============
+              Container(
+                height: 250,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage('https://i.imgur.com/1vOifiN.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                // Down arrow button at the bottom
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: GestureDetector(
+                      onTap: _scrollToContent,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.black54,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ============ LAYER 2 & 3: WHITE MAIN CARD + PROFILE (negative overlap) ============
+              Transform.translate(
+                offset: const Offset(0, -40),
+                child: Container(
+                  margin: const EdgeInsets.only(left: 16, right: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // ============ LAYER 3: PROFILE PHOTO (floating inside main card) ============
+                        Positioned(
+                          top: -50,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                                image: DecorationImage(
+                                  image: NetworkImage('https://i.imgur.com/ao4FFHe.png'),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                          ),
+                        ),
+
+                        // ============ MAIN CONTENT (padded below profile) ============
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 70, 20, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Header: Name + Members
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    "Ms. Nusrat Jahan",
-                                    style: theme.textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Welcome back,',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Ms. Nusrat Jahan',
+                                          style: theme.textTheme.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF2c3e50),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    "Department Head, ITM",
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: Colors.white70,
+                                  const SizedBox(width: 16),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'Members',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '489',
+                                          style: theme.textTheme.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Stack(
-                            children: [
+
+                              const SizedBox(height: 20),
+
+                              // Quick Action Cards (2x2 grid)
+                              GridView.count(
+                                crossAxisCount: 2,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 1.1,
+                                children: [
+                                  _buildActionCard(
+                                    theme,
+                                    'Notices',
+                                    '12 unread',
+                                    Icons.notifications_rounded,
+                                    Colors.indigo,
+                                  ),
+                                  _buildActionCard(
+                                    theme,
+                                    'Routines',
+                                    'View schedule',
+                                    Icons.schedule_rounded,
+                                    Colors.green,
+                                  ),
+                                  _buildActionCard(
+                                    theme,
+                                    'Teachers',
+                                    'Manage staff',
+                                    Icons.person_rounded,
+                                    Colors.teal,
+                                  ),
+                                  _buildActionCard(
+                                    theme,
+                                    'Feedback',
+                                    '4 new messages',
+                                    Icons.feedback_rounded,
+                                    Colors.orange,
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Banner carousel
+                              const BannerCarousel(),
+
+                              const SizedBox(height: 20),
+
+                              // Activity section
                               Text(
-                                "Welcome to ITM Connect, your gateway to the Department of Information Technology & Management. This platform keeps you informed, engaged, and connected with all department activities, achievements, and opportunities. Explore, participate, and be part of our vibrant ITM community",
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontStyle: FontStyle.italic,
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              Positioned.fill(
-                                child: Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: Container(
-                                    height: 2,
-                                    width: 120,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.cyanAccent.withOpacity(0.7),
-                                          Colors.transparent,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                'Activity',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF2c3e50),
                                 ),
                               ),
+
+                              const SizedBox(height: 12),
+
+                              _buildActivityCard(
+                                theme,
+                                Icons.campaign_rounded,
+                                'New notice',
+                                'Semester guidelines released',
+                                '2 hours ago',
+                                Colors.indigo,
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              _buildActivityCard(
+                                theme,
+                                Icons.person_add_rounded,
+                                'New teacher',
+                                'Dr. A. Rahman joined ITM',
+                                'Yesterday',
+                                Colors.teal,
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              _buildActivityCard(
+                                theme,
+                                Icons.star_rounded,
+                                'Achievement',
+                                'ITM ranked #1 in Tech Innovation',
+                                '3 days ago',
+                                Colors.amber,
+                              ),
+
+                              const SizedBox(height: 24),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              // Premium Feature Dashboard
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "Quick Access",
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white), 
-                ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
-              ),
-              const SizedBox(height: 16),
-              GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.9, // Adjusted for better text visibility
-                ),
-                itemCount: 6, // 2x3 grid
-                itemBuilder: (context, index) {
-                  String title = "";
-                  String snippet = "";
-                  IconData icon = Icons.info_outline;
-                  Color iconColor = Colors.blue;
-
-                  switch (index) {
-                    case 0:
-                      title = "Notices";
-                      snippet = "Latest: Mid-term exams rescheduled.";
-                      icon = Icons.notifications_active_rounded;
-                      iconColor = Colors.indigo;
-                      break;
-                    case 1:
-                      title = "Routine";
-                      snippet = "Next class: ITM-401 at 10:30 AM (Room 602)";
-                      icon = Icons.schedule_rounded;
-                      iconColor = Colors.green;
-                      break;
-                    case 2:
-                      title = "Assignments";
-                      snippet = "Upcoming: Database Project due in 3 days.";
-                      icon = Icons.assignment_rounded;
-                      iconColor = Colors.orange;
-                      break;
-                    case 3:
-                      title = "Events";
-                      snippet = "IT Fest 2025: Registrations open!";
-                      icon = Icons.event_note_rounded;
-                      iconColor = Colors.purple;
-                      break;
-                    case 4:
-                      title = "Resources";
-                      snippet = "New: Python Programming E-book.";
-                      icon = Icons.folder_open_rounded;
-                      iconColor = Colors.teal;
-                      break;
-                    case 5:
-                      title = "Community";
-                      snippet = "New post: Help with Flutter project.";
-                      icon = Icons.people_alt_rounded;
-                      iconColor = Colors.redAccent;
-                      break;
-                  }
-
-                  return Animate(
-                    effects: [
-                      FadeEffect(duration: 300.ms, delay: (index * 100).ms),
-                      SlideEffect(begin: const Offset(0, 0.1), duration: 300.ms),
-                    ],
-                    child: InteractiveGlassCard(
-                      onTap: () {
-                        // Handle tap for each feature card
-                        switch (index) {
-                          case 0:
-                            // Navigate to Notices
-                            break;
-                          case 1:
-                            // Navigate to Routine
-                            break;
-                          case 2:
-                            // Navigate to Assignments
-                            break;
-                          case 3:
-                            // Navigate to Events
-                            break;
-                          case 4:
-                            // Navigate to Resources
-                            break;
-                          case 5:
-                            // Navigate to Community
-                            break;
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(icon, color: iconColor, size: 32),
-                            const SizedBox(height: 8),
-                            Text(
-                              title,
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-                              textAlign: TextAlign.center,
-                            ),
-                            
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 32),
-
-              // Marketing & Showcase Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "ITM Highlights",
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white), 
-                ).animate().fadeIn(delay: 200.ms).slideX(begin: 0.1),
-              ),
-              const SizedBox(height: 16),
-              const BannerCarousel().animate().fadeIn(delay: 300.ms).slideX(begin: 0.1),
-
-              const SizedBox(height: 32),
-
-              
-              Column(
-                children: [
-                  Animate(
-                    effects: const [
-                      FadeEffect(duration: Duration(milliseconds: 500)),
-                      SlideEffect(begin: Offset(0, 0.1), duration: Duration(milliseconds: 500)),
-                    ],
-                    child: InteractiveGlassCard(
-                      onTap: () {
-                        // Navigate to Latest Discussion details
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.forum_rounded, color: Colors.cyan, size: 24),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Latest Discussion",
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "What are the best practices for secure coding in Python? - by John Doe", // Dynamic content placeholder
-                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Animate(
-                    effects: const [
-                      FadeEffect(duration: Duration(milliseconds: 500)),
-                      SlideEffect(begin: Offset(0, 0.1), duration: Duration(milliseconds: 500)),
-                    ],
-                    child: InteractiveGlassCard(
-                      onTap: () {
-                        // Navigate to Quick Poll details or interact with poll
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.poll_rounded, color: Colors.lime, size: 24),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Quick Poll",
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Will you join the upcoming IT Fest?", // Dynamic content placeholder
-                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {},
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal.shade700,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text("Yes"),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {},
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepOrange,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text("No"),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                ],
-              ),
-              const SizedBox(height: 32),
-              _buildHighlightsGrid(context),
             ],
           ),
         ),
@@ -452,73 +423,127 @@ class ITMDepartmentHomeBody extends StatelessWidget {
     );
   }
 
-  Widget _buildHighlightsGrid(BuildContext context) {
-    final highlights = [
-      {'icon': FontAwesomeIcons.rocket, 'title': "Innovation", 'color': Colors.amber},
-      {'icon': FontAwesomeIcons.userTie, 'title': "Career Focus", 'color': Colors.blueAccent},
-      {'icon': FontAwesomeIcons.earthAmericas, 'title': "Global Vision", 'color': Colors.deepPurple},
-      {'icon': FontAwesomeIcons.shieldHalved, 'title': "Cyber Safety", 'color': Colors.redAccent},
-    ];
-
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 18,
-        mainAxisSpacing: 18,
-        childAspectRatio: 1.3,
+  Widget _buildActionCard(
+    ThemeData theme,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1.5,
+        ),
       ),
-      itemCount: highlights.length,
-      itemBuilder: (context, index) {
-        final item = highlights[index];
-        return Animate(
-          effects: [
-            FadeEffect(
-              duration: const Duration(milliseconds: 500),
-              delay: Duration(milliseconds: index * 140),
-            ),
-            SlideEffect(
-              begin: const Offset(0, 0.08),
-              end: Offset.zero,
-              duration: const Duration(milliseconds: 500),
-              delay: Duration(milliseconds: index * 140),
-            ),
-          ],
-          child: InteractiveGlassCard( // Using new interactive card
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: (item['color'] as Color).withOpacity(0.13),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (item['color'] as Color).withOpacity(0.18),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: FaIcon(item['icon'] as IconData, color: item['color'] as Color, size: 28),
-                ),
-                const SizedBox(height: 10),
+                Icon(icon, color: color, size: 32),
+                const SizedBox(height: 8),
                 Text(
-                  item['title'] as String,
+                  title,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.black54,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    String description,
+    String time,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.black54,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            time,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.black38,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ============ HELPER CLASSES ============
 
 // New InteractiveGlassCard widget for hover/press effects
 class InteractiveGlassCard extends StatefulWidget {
