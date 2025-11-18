@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "572161382320",
+    "project_id": "itm-connect-c864a",
+    "storage_bucket": "itm-connect-c864a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572161382320:android:26cde86002900a8e70e875",
+        "android_client_info": {
+          "package_name": "com.example.untitled"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdIMSgLgcw-bpm8wNlbPbCTSIk5GzPz2U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

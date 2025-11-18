@@ -2,6 +2,12 @@
   "configVersion": 2,
   "packages": [
     {
+      "name": "_flutterfire_internals",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/_flutterfire_internals-1.3.64",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
       "name": "animated_text_kit",
       "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/animated_text_kit-4.2.3",
       "packageUri": "lib/",
@@ -52,6 +58,24 @@
     {
       "name": "clock",
       "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/clock-1.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "cloud_firestore",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-6.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_firestore_platform_interface",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-7.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_firestore_web",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-5.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -130,6 +154,24 @@
     {
       "name": "file_selector_windows",
       "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_windows-0.9.3+4",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "firebase_core",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core-4.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_core_platform_interface",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_platform_interface-6.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_core_web",
+      "rootUri": "file:///C:/Users/tonmoy/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_web-3.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
