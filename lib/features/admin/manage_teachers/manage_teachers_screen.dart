@@ -225,9 +225,28 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         leading: CircleAvatar(
           radius: 28,
-          backgroundImage: teacher.imageUrl.isNotEmpty
-              ? NetworkImage(teacher.imageUrl)
-              : const AssetImage('assets/images/default_profile.png') as ImageProvider,
+          backgroundColor: Colors.blueGrey,
+          backgroundImage: (() {
+            final url = teacher.imageUrl.trim();
+            if (url.isEmpty) return null;
+            final lower = url.toLowerCase();
+            try {
+              if (lower.startsWith('http://') || lower.startsWith('https://')) return NetworkImage(url);
+              if (lower.startsWith('assets/') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return AssetImage(url) as ImageProvider;
+            } catch (_) {}
+            return null;
+          })(),
+          child: (teacher.imageUrl.trim().isEmpty)
+              ? (() {
+                  final parts = teacher.name.split(' ');
+                  var initials = '';
+                  if (parts.isNotEmpty) {
+                    initials += parts[0][0];
+                    if (parts.length > 1) initials += parts[parts.length - 1][0];
+                  }
+                  return Text(initials.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+                })()
+              : null,
         ),
         title: Text(
           '${teacher.name} (${teacher.id})',

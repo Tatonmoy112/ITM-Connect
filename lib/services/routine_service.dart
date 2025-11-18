@@ -91,4 +91,13 @@ class RoutineService {
       tx.set(docRef, updated, SetOptions(merge: true));
     });
   }
+
+  // Stream all routines (real-time)
+  Stream<List<Routine>> streamAllRoutines() {
+    return _firestore.collection(_collection).snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Routine.fromMap(doc.id, doc.data()))
+          .toList();
+    });
+  }
 }

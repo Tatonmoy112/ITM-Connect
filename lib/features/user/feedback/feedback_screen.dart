@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:itm_connect/models/feedback.dart' as feedback_model;
+import 'package:itm_connect/services/feedback_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -15,6 +17,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
   final _messageController = TextEditingController();
   String _feedbackType = 'Suggestion';
   bool isSubmitting = false;
+  final FeedbackService _feedbackService = FeedbackService();
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
@@ -44,19 +47,47 @@ class _FeedbackScreenState extends State<FeedbackScreen>
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 2)); // mock save
 
-    if (mounted) {
-      _nameController.clear();
-      _emailController.clear();
-      _messageController.clear();
-      _feedbackType = 'Suggestion';
+    try {
+      final now = DateTime.now();
+      final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final time = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+      
+      // Generate document ID as {date}_{email}
+      final docId = '${date}_${_emailController.text.trim()}';
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Thank you for your feedback!')),
+      final fbModel = feedback_model.Feedback(
+        id: docId,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        feedbackType: _feedbackType,
+        message: _messageController.text.trim(),
+        date: date,
+        time: time,
       );
 
-      setState(() => isSubmitting = false);
+      await _feedbackService.submitFeedback(fbModel);
+
+      if (mounted) {
+        _nameController.clear();
+        _emailController.clear();
+        _messageController.clear();
+        _feedbackType = 'Suggestion';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Thank you for your feedback!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
     }
   }
 

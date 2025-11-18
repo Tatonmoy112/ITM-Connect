@@ -8,6 +8,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
+import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/services/routine_service.dart';
 
 class ClassRoutineScreen extends StatefulWidget {
   const ClassRoutineScreen({super.key});
@@ -21,6 +23,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
   String? selectedDay;
 
   final List<String> days = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
+  final RoutineService _routineService = RoutineService();
 
   Future<void> _generateAndOpenFile() async {
     if (selectedBatch == null) return;
@@ -32,6 +35,25 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
     final image = pw.MemoryImage(
       (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
     );
+
+    // Fetch all routine data from Firebase first
+    final List<List<String>> allTableData = [];
+    for (final day in days) {
+      final routineId = '${selectedBatch}_$day';
+      final routine = await _routineService.getRoutine(routineId);
+
+      if (routine != null && routine.classes.isNotEmpty) {
+        for (final classItem in routine.classes) {
+          allTableData.add([
+            day,
+            '${classItem.courseName} (${classItem.courseCode})',
+            classItem.time,
+            classItem.room,
+            classItem.teacherInitial,
+          ]);
+        }
+      }
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -52,51 +74,30 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
           ),
         ),
         build: (context) {
-          final List<pw.Widget> dayTables = [];
-          for (final day in days) {
-            final routineKey = '${selectedBatch}_$day';
-            final routines = routineData[routineKey];
-
-            if (routines != null && routines.isNotEmpty) {
-              final List<List<String>> tableData = [];
-              for (final classItem in routines) {
-                tableData.add([
-                  day,
-                  '${classItem['courseName']} (${classItem['courseCode']})',
-                  classItem['time']!,
-                  classItem['room']!,
-                  classItem['teacher']!,
-                ]);
-              }
-              dayTables.add(
-                pw.Table.fromTextArray(
-                  headers: headers,
-                  data: tableData,
-                  headerStyle: boldStyle.copyWith(color: PdfColors.white),
-                  headerDecoration: const pw.BoxDecoration(
-                    color: PdfColors.teal700,
-                  ),
-                  cellAlignment: pw.Alignment.center,
-                  cellStyle: const pw.TextStyle(fontSize: 10),
-                  border: pw.TableBorder.all(),
-                  columnWidths: {
-                    0: const pw.FlexColumnWidth(1.5),
-                    1: const pw.FlexColumnWidth(3),
-                    2: const pw.FlexColumnWidth(2.5),
-                    3: const pw.FlexColumnWidth(1.5),
-                    4: const pw.FlexColumnWidth(1.5),
-                  },
-                ),
-              );
-              dayTables.add(pw.SizedBox(height: 20)); // Add space between tables
-            }
-          }
-
-          if (dayTables.isEmpty) {
+          if (allTableData.isEmpty) {
             return [pw.Center(child: pw.Text('No routine available for this batch.'))];
           }
-
-          return dayTables;
+          
+          return [
+            pw.Table.fromTextArray(
+              headers: headers,
+              data: allTableData,
+              headerStyle: boldStyle.copyWith(color: PdfColors.white),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.teal700,
+              ),
+              cellAlignment: pw.Alignment.center,
+              cellStyle: const pw.TextStyle(fontSize: 10),
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1.5),
+                1: const pw.FlexColumnWidth(3),
+                2: const pw.FlexColumnWidth(2.5),
+                3: const pw.FlexColumnWidth(1.5),
+                4: const pw.FlexColumnWidth(1.5),
+              },
+            ),
+          ];
         },
       ),
     );
@@ -107,151 +108,6 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
     await OpenFilex.open(file.path);
   }
 
-
-  // Updated routineData structure - BATCH REMOVED FROM HERE
-  final Map<String, List<Map<String, String>>> routineData = {
-    // Batch 6 routine
-    '6_Sat': [
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 418',
-        'courseCode': 'ITM418',
-        'teacher': 'MA',
-        'room': '609',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 314',
-        'courseCode': 'ITM314',
-        'teacher': 'FM',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-    '6_Mon': [
-      {
-        'time': '10:30 AM - 11:30 AM',
-        'courseName': 'ITM 401',
-        'courseCode': 'ITM401',
-        'teacher': 'NJ',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 313',
-        'courseCode': 'ITM313',
-        'teacher': 'FM',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-    '6_Tue': [
-      {
-        'time': '8:30 AM - 10:00 AM',
-        'courseName': 'ITM 418',
-        'courseCode': 'ITM418',
-        'teacher': 'MA',
-        'room': '603',
-      },
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 401',
-        'courseCode': 'ITM401',
-        'teacher': 'NJ',
-        'room': '602',
-      },
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 313',
-        'courseCode': 'ITM313',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-
-    // Batch 7 routine
-    '7_Sat': [
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 321',
-        'courseCode': 'ITM321',
-        'teacher': '',
-        'room': '609',
-      },
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 321',
-        'courseCode': 'ITM321',
-        'teacher': '',
-        'room': '603',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': '',
-        'room': '602',
-      },
-    ],
-    '7_Sun': [
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 306',
-        'courseCode': 'ITM306',
-        'teacher': '',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 323',
-        'courseCode': 'ITM323',
-        'teacher': '',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 324',
-        'courseCode': 'ITM324',
-        'teacher': '',
-        'room': '609',
-      },
-    ],
-    '7_Mon': [
-      {
-        'time': '8:30 AM - 9:50 AM',
-        'courseName': 'ITM 306',
-        'courseCode': 'ITM306',
-        'teacher': '',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 323',
-        'courseCode': 'ITM323',
-        'teacher': '',
-        'room': '603',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': '',
-        'room': '602',
-      },
-    ],
-  };
 
   @override
   void initState() {
@@ -266,10 +122,9 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final routineKey = selectedBatch != null && selectedDay != null
+    final routineId = selectedBatch != null && selectedDay != null
         ? '${selectedBatch}_$selectedDay'
         : null;
-    final routines = routineKey != null ? routineData[routineKey] : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -360,75 +215,89 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.black54),
               ).animate().fadeIn(),
 
-            if (selectedBatch != null &&
-                selectedDay != null &&
-                (routines == null || routines.isEmpty))
-              Animate(
-                effects: const [
-                  FadeEffect(duration: Duration(milliseconds: 400)),
-                  SlideEffect(begin: Offset(0, 0.1))
-                ],
-                child: Card(
-                  color: Colors.white, // Card color white
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Colors.white, // Ensure inner container is white
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.orange, size: 28),
-                            SizedBox(width: 10),
-                            Text(
-                              'No Classes Today',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Class Time: 8:30 AM – 4:00 PM',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Each class duration: 1 hour 30 minutes.',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            if (routineId != null)
+              StreamBuilder<Routine?>(
+                stream: _routineService.streamRoutine(routineId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
-            if (routines != null && routines.isNotEmpty)
-              ...routines.mapIndexed((index, routine) {
-                return Animate(
-                  effects: [
-                    FadeEffect(duration: 300.ms, delay: (index * 100).ms),
-                    SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
-                  ],
-                  child: RoutineClassCard(
-                    time: routine['time']!,
-                    courseName: routine['courseName']!,
-                    courseCode: routine['courseCode']!,
-                    teacher: routine['teacher']!,
-                    room: routine['room']!,
-                    // Removed batch: routine['batch']!
-                  ),
-                );
-              }).toList(),
+                  final routine = snapshot.data;
+
+                  if (routine == null || routine.classes.isEmpty) {
+                    return Animate(
+                      effects: const [
+                        FadeEffect(duration: Duration(milliseconds: 400)),
+                        SlideEffect(begin: Offset(0, 0.1))
+                      ],
+                      child: Card(
+                        color: Colors.white,
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: Colors.orange, size: 28),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'No Classes Today',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Class Time: 8:30 AM – 4:00 PM',
+                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Each class duration: 1 hour 30 minutes.',
+                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: routine.classes.mapIndexed((index, classItem) {
+                      return Animate(
+                        effects: [
+                          FadeEffect(duration: 300.ms, delay: (index * 100).ms),
+                          SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
+                        ],
+                        child: RoutineClassCard(
+                          time: classItem.time,
+                          courseName: classItem.courseName,
+                          courseCode: classItem.courseCode,
+                          teacherInitial: classItem.teacherInitial,
+                          room: classItem.room,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -441,7 +310,7 @@ class RoutineClassCard extends StatelessWidget {
   final String time;
   final String courseName;
   final String courseCode;
-  final String teacher;
+  final String teacherInitial;
   final String room;
 
   const RoutineClassCard({
@@ -449,7 +318,7 @@ class RoutineClassCard extends StatelessWidget {
     required this.time,
     required this.courseName,
     required this.courseCode,
-    required this.teacher,
+    required this.teacherInitial,
     required this.room,
   });
 
@@ -518,7 +387,7 @@ class RoutineClassCard extends StatelessWidget {
                 children: [
                   const Icon(Icons.person_rounded, size: 22, color: Colors.green),
                   const SizedBox(width: 8),
-                  Text(teacher.isNotEmpty ? teacher : '-', style: const TextStyle(fontSize: 14)),
+                  Text(teacherInitial.isNotEmpty ? teacherInitial : '-', style: const TextStyle(fontSize: 14)),
                 ],
               ),
               const SizedBox(height: 4),
