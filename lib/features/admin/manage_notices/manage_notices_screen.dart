@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:itm_connect/models/notice.dart';
+import 'package:itm_connect/services/notice_service.dart';
 
 class ManageNoticesScreen extends StatefulWidget {
   const ManageNoticesScreen({super.key});
@@ -9,18 +11,7 @@ class ManageNoticesScreen extends StatefulWidget {
 
 class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     with SingleTickerProviderStateMixin {
-  final List<Map<String, String>> _notices = [
-    {
-      'title': 'Class Cancelled',
-      'body': 'All classes will remain suspended on Monday due to departmental event.',
-      'date': '2025-07-01',
-    },
-    {
-      'title': 'Mid-Term Exam Notice',
-      'body': 'Mid-term exams will begin from 15th July. Check routine later.',
-      'date': '2025-07-05',
-    },
-  ];
+  final NoticeService _noticeService = NoticeService();
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
@@ -39,82 +30,102 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     );
   }
 
-  void _showNoticeForm({Map<String, String>? existingData, int? index}) {
-    final titleController = TextEditingController(text: existingData?['title']);
-    final bodyController = TextEditingController(text: existingData?['body']);
-    final dateController = TextEditingController(text: existingData?['date']);
+  void _showNoticeForm({Notice? existingNotice}) {
+    final titleController = TextEditingController(text: existingNotice?.title ?? '');
+    final bodyController = TextEditingController(text: existingNotice?.body ?? '');
+    final dateController = TextEditingController(text: existingNotice?.date ?? '');
     final formKey = GlobalKey<FormState>();
+
+    String _makeDocId(String date, String title) {
+      final t = title.replaceAll(' ', '');
+      final safe = t.replaceAll(RegExp(r"[^A-Za-z0-9_]"), '');
+      return '${date}_$safe';
+    }
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(existingData == null ? 'Add Notice' : 'Edit Notice'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                  validator: (value) => value!.isEmpty ? 'Title is required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: bodyController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Body'),
-                  validator: (value) => value!.isEmpty ? 'Body is required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: dateController,
-                  decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
-                  keyboardType: TextInputType.datetime,
-                  validator: (value) => value!.isEmpty ? 'Date is required' : null,
-                ),
-              ],
+      builder: (_) => StatefulBuilder(builder: (context, setModalState) {
+        bool isLoading = false;
+        return AlertDialog(
+          title: Text(existingNotice == null ? 'Add Notice' : 'Edit Notice'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Title'),
+                    validator: (value) => value!.isEmpty ? 'Title is required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: bodyController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Body'),
+                    validator: (value) => value!.isEmpty ? 'Body is required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: dateController,
+                    decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+                    keyboardType: TextInputType.datetime,
+                    validator: (value) => value!.isEmpty ? 'Date is required' : null,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
-              foregroundColor: Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final newData = {
-                  'title': titleController.text.trim(),
-                  'body': bodyController.text.trim(),
-                  'date': dateController.text.trim(),
-                };
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                // prevent duplicate taps
+                if (isLoading) return;
+                if (!formKey.currentState!.validate()) return;
+                setModalState(() => isLoading = true);
 
-                setState(() {
-                  if (existingData == null) {
-                    _notices.add(newData);
-                  } else {
-                    _notices[index!] = newData;
+                final title = titleController.text.trim();
+                final body = bodyController.text.trim();
+                final date = dateController.text.trim();
+
+                final newId = _makeDocId(date, title);
+
+                try {
+                  final newNotice = Notice(id: newId, title: title, body: body, date: date);
+                  await _noticeService.setNotice(newNotice);
+
+                  // if editing and id changed, delete old doc
+                  if (existingNotice != null && existingNotice.id != newId) {
+                    await _noticeService.deleteNotice(existingNotice.id);
                   }
-                });
 
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+                  if (mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+                  }
+                } finally {
+                  setModalState(() => isLoading = false);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      }),
     );
   }
 
-  void _deleteNotice(int index) {
+  void _deleteNotice(String docId) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -127,9 +138,19 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() => _notices.removeAt(index));
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await _noticeService.deleteNotice(docId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notice deleted')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -138,7 +159,7 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     );
   }
 
-  Widget _buildNoticeCard(Map<String, String> notice, int index) {
+  Widget _buildNoticeCard(Notice notice) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.only(bottom: 16),
@@ -157,7 +178,7 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(
-          notice['title'] ?? '',
+          notice.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Column(
@@ -165,12 +186,12 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
           children: [
             const SizedBox(height: 6),
             Text(
-              notice['body'] ?? '',
+              notice.body,
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 6),
             Text(
-              '📅 ${notice['date'] ?? ''}',
+              '📅 ${notice.date}',
               style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
           ],
@@ -180,11 +201,11 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
           children: [
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.orange),
-              onPressed: () => _showNoticeForm(existingData: notice, index: index),
+              onPressed: () => _showNoticeForm(existingNotice: notice),
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _deleteNotice(index),
+              onPressed: () => _deleteNotice(notice.id),
             ),
           ],
         ),
@@ -208,12 +229,23 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: _notices.isEmpty
-                  ? const Center(child: Text('No notices available.'))
-                  : ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: _notices.length,
-                itemBuilder: (_, index) => _buildNoticeCard(_notices[index], index),
+              child: StreamBuilder<List<Notice>>(
+                stream: _noticeService.streamAllNotices(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final notices = snapshot.data ?? [];
+                  if (notices.isEmpty) return const Center(child: Text('No notices available.'));
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: notices.length,
+                    itemBuilder: (_, index) => _buildNoticeCard(notices[index]),
+                  );
+                },
               ),
             ),
           ),

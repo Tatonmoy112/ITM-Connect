@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/services/routine_service.dart';
 
 class ManageRoutineScreen extends StatefulWidget {
   const ManageRoutineScreen({super.key});
@@ -15,7 +17,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
   String selectedDay = 'Sunday';
   String selectedBatch = '56th';
 
-  List<Map<String, String>> routines = [];
+  final RoutineService _routineService = RoutineService();
 
   final TextEditingController _batchController = TextEditingController();
 
@@ -61,6 +63,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
   }
 
   void _showRoutineForm({Map<String, String>? routine, int? index}) {
+    // New implementation: save to Firestore under document id: {batch}_{day}
     final courseName = TextEditingController(text: routine?['courseName']);
     final courseCode = TextEditingController(text: routine?['courseCode']);
     final teacher = TextEditingController(text: routine?['teacher']);
@@ -73,7 +76,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(routine == null ? 'Add Routine' : 'Edit Routine'),
+        title: Text(routine == null ? 'Add Class' : 'Edit Class'),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -100,10 +103,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   decoration: const InputDecoration(labelText: 'Teacher Initial (unique)'),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Required';
-                    final isDuplicate = routines.any((r) =>
-                    r['teacherInitial'] == value.trim() &&
-                        (routine == null || r != routine));
-                    return isDuplicate ? 'Teacher Initial must be unique' : null;
+                    return null;
                   },
                 ),
                 TextFormField(
@@ -127,28 +127,50 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final newRoutine = {
-                  'courseName': courseName.text.trim(),
-                  'courseCode': courseCode.text.trim(),
-                  'teacher': teacher.text.trim(),
-                  'teacherInitial': teacherInitial.text.trim(),
-                  'room': room.text.trim(),
-                  'time': time.text.trim(),
-                  'day': selectedDay,
-                  'batch': selectedBatch,
-                };
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
 
-                setState(() {
-                  if (routine == null) {
-                    routines.add(newRoutine);
-                  } else {
-                    routines[index!] = newRoutine;
-                  }
-                });
+              final newClass = RoutineClass(
+                courseName: courseName.text.trim(),
+                courseCode: courseCode.text.trim(),
+                teacherName: teacher.text.trim(),
+                teacherInitial: teacherInitial.text.trim(),
+                room: room.text.trim(),
+                time: time.text.trim(),
+              );
 
-                Navigator.pop(context);
+              final docId = _docId();
+
+              try {
+                // Check for duplicates within the existing routine
+                final existingRoutine = await _routineService.getRoutine(docId);
+                final existingClasses = existingRoutine?.classes ?? [];
+
+                final isDuplicate = existingClasses.any((c) =>
+                    c.teacherInitial == newClass.teacherInitial &&
+                    ((routine == null) || (existingClasses.indexOf(c) != index)));
+
+                if (isDuplicate) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Teacher initial already exists in this routine')),
+                  );
+                  return;
+                }
+
+                if (routine == null) {
+                  await _routineService.addClass(docId, newClass);
+                } else {
+                  // update by index
+                  await _routineService.updateClass(docId, index!, newClass);
+                }
+
+                if (mounted) Navigator.pop(context);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
               }
             },
             child: const Text('Save'),
@@ -162,15 +184,30 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Routine'),
-        content: const Text('Are you sure you want to delete this routine?'),
+        title: const Text('Delete Class'),
+        content: const Text('Are you sure you want to delete this class from the routine?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() => routines.removeAt(index));
-              Navigator.pop(context);
+            onPressed: () async {
+              final docId = _docId();
+              try {
+                await _routineService.deleteClass(docId, index);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Class removed')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -179,10 +216,29 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     );
   }
 
-  List<Map<String, String>> _filteredRoutines() {
-    return routines
-        .where((r) => r['day'] == selectedDay && r['batch'] == selectedBatch)
-        .toList();
+  // Helper: map full day name to short code used in document id (Sat, Sun, Mon, Tue, Wed, Thu)
+  String _shortDay(String day) {
+    switch (day) {
+      case 'Saturday':
+        return 'Sat';
+      case 'Sunday':
+        return 'Sun';
+      case 'Monday':
+        return 'Mon';
+      case 'Tuesday':
+        return 'Tue';
+      case 'Wednesday':
+        return 'Wed';
+      case 'Thursday':
+        return 'Thu';
+      default:
+        return day.substring(0, 3);
+    }
+  }
+
+  String _docId() {
+    // Document ID format: {batch}_{dayShort} e.g. "56th_Sat"
+    return '${selectedBatch}_${_shortDay(selectedDay)}';
   }
 
   void _addBatch() {
@@ -208,7 +264,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredRoutines();
+    // Routine list is loaded from Firestore per selected batch/day
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -286,49 +342,73 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: filtered.isEmpty
-                  ? const Center(child: Text('No routine found for this day and batch.'))
-                  : ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: filtered.length,
-                itemBuilder: (_, index) {
-                  final routine = filtered[index];
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      title: Text(routine['courseName'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Code: ${routine['courseCode'] ?? ''}'),
-                          Text('Teacher: ${routine['teacher'] ?? ''}'),
-                          Text('Initial: ${routine['teacherInitial'] ?? ''}'),
-                          Text('Room: ${routine['room'] ?? ''}'),
-                          Text('Time: ${routine['time'] ?? ''}'),
-                        ],
-                      ),
-                      trailing: Wrap(
-                        spacing: 8,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.orange),
-                            onPressed: () => _showRoutineForm(routine: routine, index: index),
+              child: StreamBuilder<Routine?>(
+                stream: _routineService.streamRoutine(_docId()),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  final routineDoc = snapshot.data;
+                  final classes = routineDoc?.classes ?? [];
+
+                  if (classes.isEmpty) {
+                    return const Center(child: Text('No routine found for this day and batch.'));
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: classes.length,
+                    itemBuilder: (_, index) {
+                      final cls = classes[index];
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          title: Text(cls.courseName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Code: ${cls.courseCode}'),
+                              Text('Teacher: ${cls.teacherName}'),
+                              Text('Initial: ${cls.teacherInitial}'),
+                              Text('Room: ${cls.room}'),
+                              Text('Time: ${cls.time}'),
+                            ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteRoutine(index),
+                          trailing: Wrap(
+                            spacing: 8,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.orange),
+                                onPressed: () => _showRoutineForm(routine: {
+                                  'courseName': cls.courseName,
+                                  'courseCode': cls.courseCode,
+                                  'teacher': cls.teacherName,
+                                  'teacherInitial': cls.teacherInitial,
+                                  'room': cls.room,
+                                  'time': cls.time,
+                                }, index: index),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteRoutine(index),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
