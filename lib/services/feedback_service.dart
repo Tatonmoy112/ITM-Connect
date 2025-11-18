@@ -1,30 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:itm_connect/models/feedback.dart';
+import 'package:itm_connect/models/feedback_entry.dart';
+import 'package:itm_connect/models/feedback.dart' as fb_model;
 
 class FeedbackService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'feedback';
+  final CollectionReference _col = FirebaseFirestore.instance.collection('feedback');
 
-  Future<void> submitFeedback(Feedback feedback) async {
-    try {
-      await _firestore.collection(_collection).doc(feedback.id).set(feedback.toMap(), SetOptions(merge: true));
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<Feedback>> getAllFeedback() async {
-    try {
-      final snap = await _firestore.collection(_collection).orderBy('date', descending: true).get();
-      return snap.docs.map((d) => Feedback.fromMap(d.id, d.data())).toList();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Stream<List<Feedback>> streamAllFeedback() {
-    return _firestore.collection(_collection).orderBy('date', descending: true).snapshots().map((snap) {
-      return snap.docs.map((d) => Feedback.fromMap(d.id, d.data())).toList();
+  Stream<List<FeedbackEntry>> streamAllFeedbacks() {
+    return _col.snapshots().map((snap) {
+      return snap.docs.map((d) {
+        final data = d.data() as Map<String, dynamic>;
+        return FeedbackEntry.fromMap(d.id, data);
+      }).toList();
     });
+  }
+
+  Future<void> deleteFeedback(String docId) async {
+    await _col.doc(docId).delete();
+  }
+
+  Future<void> submitFeedback(dynamic entry) async {
+    String docId;
+    Map<String, dynamic> data;
+
+    if (entry is FeedbackEntry) {
+      docId = '${entry.date}_${entry.email}';
+      data = {
+        'date': entry.date,
+        'time': entry.time,
+        'email': entry.email,
+        'name': entry.name,
+        'feedbackType': entry.feedbackType,
+        'message': entry.message,
+      };
+    } else if (entry is fb_model.Feedback) {
+      docId = entry.id;
+      data = entry.toMap();
+    } else {
+      throw ArgumentError('Unsupported feedback type');
+    }
+
+    await _col.doc(docId).set(data, SetOptions(merge: true));
   }
 }

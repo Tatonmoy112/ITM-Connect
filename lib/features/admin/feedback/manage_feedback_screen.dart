@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:itm_connect/models/feedback_entry.dart';
+import 'package:itm_connect/services/feedback_service.dart';
 
 class ManageFeedbackScreen extends StatefulWidget {
   const ManageFeedbackScreen({super.key});
@@ -9,21 +11,7 @@ class ManageFeedbackScreen extends StatefulWidget {
 
 class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     with SingleTickerProviderStateMixin {
-  // ✅ Mock data — replace with Firestore in future
-  final List<Map<String, String>> feedbacks = [
-    {
-      'name': 'John Doe',
-      'email': 'john@diu.edu.bd',
-      'message': 'The app is really helpful. Great job!',
-      'timestamp': '2025-07-08 10:30 AM',
-    },
-    {
-      'name': 'Sarah Ahmed',
-      'email': 'sarah@diu.edu.bd',
-      'message': 'Would love to see dark mode support.',
-      'timestamp': '2025-07-08 11:00 AM',
-    },
-  ];
+  final FeedbackService _feedbackService = FeedbackService();
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
@@ -42,7 +30,7 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     );
   }
 
-  void _deleteFeedback(int index) {
+  void _deleteFeedbackById(String docId) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -52,11 +40,18 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                feedbacks.removeAt(index);
-              });
+            onPressed: () async {
               Navigator.pop(context);
+              try {
+                await _feedbackService.deleteFeedback(docId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback deleted')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -65,7 +60,7 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     );
   }
 
-  Widget _buildFeedbackCard(Map<String, String> data, int index) {
+  Widget _buildFeedbackCard(FeedbackEntry data, int index) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.only(bottom: 20),
@@ -79,23 +74,24 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         title: Text(
-          data['name'] ?? '',
+          data.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(data['email'] ?? '', style: const TextStyle(fontSize: 13, color: Colors.black87)),
+            Text(data.email, style: const TextStyle(fontSize: 13, color: Colors.black87)),
             const SizedBox(height: 8),
-            Text(data['message'] ?? '', style: const TextStyle(fontSize: 15)),
+            Text(data.message, style: const TextStyle(fontSize: 15)),
             const SizedBox(height: 8),
-            Text('🕒 ${data['timestamp'] ?? ''}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            if (data.feedbackType.isNotEmpty) Text('Type: ${data.feedbackType}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+            const SizedBox(height: 6),
+            Text('📅 ${data.date}  🕒 ${data.time}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () => _deleteFeedback(index),
+          onPressed: () => _deleteFeedbackById(data.id),
         ),
       ),
     );
@@ -117,12 +113,23 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: feedbacks.isEmpty
-                  ? const Center(child: Text('No feedback available.'))
-                  : ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: feedbacks.length,
-                itemBuilder: (_, index) => _buildFeedbackCard(feedbacks[index], index),
+              child: StreamBuilder<List<FeedbackEntry>>(
+                stream: _feedbackService.streamAllFeedbacks(),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snap.hasError) {
+                    return Center(child: Text('Error: ${snap.error}'));
+                  }
+                  final list = snap.data ?? [];
+                  if (list.isEmpty) return const Center(child: Text('No feedback available.'));
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: list.length,
+                    itemBuilder: (_, index) => _buildFeedbackCard(list[index], index),
+                  );
+                },
               ),
             ),
           ),

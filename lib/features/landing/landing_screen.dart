@@ -1,9 +1,10 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:itm_connect/features/admin/login/admin_login_screen.dart';
 import 'package:itm_connect/features/user/home/user_home_screen.dart';
 import 'package:itm_connect/widgets/app_layout.dart';
-import 'package:animated_text_kit/animated_text_kit.dart';
+ 
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -25,33 +26,33 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
 
     _bgController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 600),
     )..forward();
 
     _cardController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 450),
     );
-    Future.delayed(const Duration(milliseconds: 700), () {
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _cardController.forward();
     });
 
     _buttonController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 450),
     );
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) _buttonController.forward();
     });
 
     _3dController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 10),
+      duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
   }
 
@@ -94,11 +95,11 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: Colors.tealAccent.withOpacity(0.5),
-              blurRadius: 32,
-              spreadRadius: 8,
-            ),
+                  BoxShadow(
+                    color: Colors.tealAccent.withOpacity(0.45),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
           ],
         ),
         child: CircleAvatar(
@@ -123,7 +124,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Container(
               width: double.infinity,
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -134,9 +135,9 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                 border: Border.all(color: Colors.teal.withOpacity(0.18)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.09),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -182,7 +183,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.verified, color: Colors.teal.shade400, size: 22),
+                        Icon(Icons.verified, color: Colors.teal.shade400, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           'Empowering Students',
@@ -207,8 +208,8 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     return FadeTransition(
       opacity: _buttonController,
       child: ScaleTransition(
-        scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-          CurvedAnimation(parent: _buttonController, curve: Curves.elasticOut),
+        scale: Tween<double>(begin: 0.9, end: 1.0).animate(
+          CurvedAnimation(parent: _buttonController, curve: Curves.easeOutBack),
         ),
         child: Material(
           color: Colors.transparent,
@@ -245,18 +246,14 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                   const SizedBox(width: 10),
                   SizedBox(
                     width: 150,
-                    child: DefaultTextStyle(
-                      style: const TextStyle(
+                    child: const Text(
+                      'GET STARTED',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
                         letterSpacing: 0.7,
-                      ),
-                      child: AnimatedTextKit(
-                        animatedTexts: [
-                          FadeAnimatedText('GET STARTED'),
-                        ],
-                        repeatForever: true,
                       ),
                     ),
                   ),
@@ -288,19 +285,13 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                     child: AnimatedBuilder(
                       animation: _3dController,
                       builder: (context, child) {
-                        final angle = _3dController.value * 3.14 * 2;
-                        return Transform(
-                          transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.001)
-                            ..rotateY(angle),
+                              final angle = math.sin(_3dController.value * math.pi * 2) * 0.18; // subtle rocking
+                              return Transform(
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.001)
+                                  ..rotateY(angle),
                           alignment: Alignment.center,
-                          child: angle > 3.14 / 2 && angle < 3.14 * 1.5
-                              ? Transform(
-                                  transform: Matrix4.identity()..rotateY(3.14),
-                                  alignment: Alignment.center,
-                                  child: child,
-                                )
-                              : child,
+                                child: child,
                         );
                       },
                       child: Column(

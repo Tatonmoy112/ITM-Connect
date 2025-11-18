@@ -1,11 +1,11 @@
 class Feedback {
-  final String id; // document id like '2025-11-18_tonmoy@gmail.com'
+  final String id;
   final String name;
   final String email;
   final String feedbackType;
   final String message;
-  final String date; // YYYY-MM-DD
-  final String time; // HH:MM:SS or timestamp
+  final String date;
+  final String time;
 
   Feedback({
     required this.id,
@@ -19,25 +19,25 @@ class Feedback {
 
   Map<String, dynamic> toMap() {
     return {
-      'name': name,
-      'email': email,
-      'feedbackType': feedbackType,
-      'message': message,
       'date': date,
       'time': time,
+      'email': email,
+      'name': name,
+      'feedbackType': feedbackType,
+      'message': message,
     };
   }
 
-  factory Feedback.fromMap(String id, Map<String, dynamic>? map) {
-    final m = map ?? {};
+  factory Feedback.fromMap(String id, Map<String, dynamic> map) {
     return Feedback(
       id: id,
-      name: m['name'] ?? '',
-      email: m['email'] ?? '',
-      feedbackType: m['feedbackType'] ?? '',
-      message: m['message'] ?? '',
-      date: m['date'] ?? '',
-      time: m['time'] ?? '',
+      name: (map['name'] ?? '').toString(),
+      email: (map['email'] ?? '').toString(),
+      feedbackType: (map['feedbackType'] ?? '').toString(),
+      message: (map['message'] ?? '').toString(),
+      date: (map['date'] ?? '').toString(),
+      time: (map['time'] ?? '').toString(),
     );
   }
 }
+

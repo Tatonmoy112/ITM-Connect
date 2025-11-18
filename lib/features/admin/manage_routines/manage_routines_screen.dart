@@ -327,8 +327,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Manage Batches", style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
+                
                 Row(
                   children: [
                     Expanded(
@@ -350,7 +349,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('Manage Batches'),
+                      child: const Text('Create batch'),
                     ),
                   ],
                 ),
@@ -431,36 +430,109 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          title: Text(cls.courseName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Code: ${cls.courseCode}'),
-                              Text('Teacher: ${cls.teacherName}'),
-                              Text('Initial: ${cls.teacherInitial}'),
-                              Text('Room: ${cls.room}'),
-                              Text('Time: ${cls.time}'),
-                            ],
-                          ),
-                          trailing: Wrap(
-                            spacing: 8,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.orange),
-                                onPressed: () => _showRoutineForm(routine: {
-                                  'courseName': cls.courseName,
-                                  'courseCode': cls.courseCode,
-                                  'teacher': cls.teacherName,
-                                  'teacherInitial': cls.teacherInitial,
-                                  'room': cls.room,
-                                  'time': cls.time,
-                                }, index: index),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      cls.courseName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(cls.courseCode, style: const TextStyle(fontSize: 12, color: Colors.indigo)),
+                                  ),
+                                ],
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteRoutine(index),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 16, color: Colors.black54),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: Text(cls.teacherName, style: const TextStyle(fontSize: 14))),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text('Initial: ${cls.teacherInitial}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.meeting_room, size: 14, color: Colors.green),
+                                        const SizedBox(width: 6),
+                                        Text(cls.room, style: const TextStyle(fontSize: 12, color: Colors.green)),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.access_time, size: 14, color: Colors.blue),
+                                        const SizedBox(width: 6),
+                                        Text(cls.time, style: const TextStyle(fontSize: 12, color: Colors.blue)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.edit, color: Colors.orange),
+                                    label: const Text('Edit', style: TextStyle(color: Colors.orange)),
+                                    onPressed: () => _showRoutineForm(routine: {
+                                      'courseName': cls.courseName,
+                                      'courseCode': cls.courseCode,
+                                      'teacher': cls.teacherName,
+                                      'teacherInitial': cls.teacherInitial,
+                                      'room': cls.room,
+                                      'time': cls.time,
+                                    }, index: index),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: Colors.red.shade50,
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                    onPressed: () => _deleteRoutine(index),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
