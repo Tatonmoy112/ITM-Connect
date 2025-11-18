@@ -12,7 +12,8 @@ class ManageRoutineScreen extends StatefulWidget {
 class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     with SingleTickerProviderStateMixin {
   final List<String> days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-  final List<String> batches = ['56th', '57th', '58th', '59th', '60th'];
+  // batches will be loaded from Firestore; start empty
+  List<String> batches = [];
 
   String selectedDay = 'Sunday';
   String selectedBatch = '56th';
@@ -244,20 +245,25 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
   void _addBatch() {
     final newBatch = _batchController.text.trim();
     if (newBatch.isEmpty || batches.contains(newBatch)) return;
-
-    setState(() {
-      batches.add(newBatch);
+    final docId = '${newBatch}_${_shortDay(selectedDay)}';
+    _routineService.createEmptyRoutine(docId, newBatch, selectedDay).then((_) {
+      _batchController.clear();
+    }).catchError((e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error creating batch: ${e.toString()}')));
+      }
     });
-    _batchController.clear();
   }
 
   void _deleteBatch(String batch) {
-    if (batches.length <= 1) return;
-
-    setState(() {
-      batches.remove(batch);
-      if (selectedBatch == batch) {
-        selectedBatch = batches.first;
+    // delete all routine documents for this batch from Firestore
+    _routineService.deleteBatch(batch).then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Batch removed from Firestore')));
+      }
+    }).catchError((e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting batch: ${e.toString()}')));
       }
     });
   }
@@ -272,22 +278,49 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                DropdownButton<String>(
-                  value: selectedDay,
-                  onChanged: (val) => setState(() => selectedDay = val!),
-                  items: days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                ),
-                const SizedBox(width: 20),
-                DropdownButton<String>(
-                  value: selectedBatch,
-                  onChanged: (val) => setState(() => selectedBatch = val!),
-                  items: batches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                ),
-              ],
+            child: StreamBuilder<List<String>>(
+              stream: _routineService.streamAllBatches(),
+              builder: (context, snap) {
+                final batchList = snap.data ?? [];
+
+                // If no selectedBatch yet but firestore has batches, pick first once
+                if (batchList.isNotEmpty && (selectedBatch.isEmpty || !batchList.contains(selectedBatch))) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() {
+                      selectedBatch = batchList.first;
+                      batches = List<String>.from(batchList);
+                    });
+                  });
+                } else if (batchList.isNotEmpty) {
+                  // ensure local batches list follows firestore list
+                  batches = List<String>.from(batchList);
+                }
+
+                return Row(
+                  children: [
+                    DropdownButton<String>(
+                      value: selectedDay,
+                      onChanged: (val) => setState(() => selectedDay = val!),
+                      items: days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                    ),
+                    const SizedBox(width: 20),
+                    DropdownButton<String>(
+                      value: batchList.contains(selectedBatch) ? selectedBatch : null,
+                      hint: const Text('Select batch'),
+                      onChanged: (val) {
+                        if (val == null) return;
+                        setState(() => selectedBatch = val);
+                      },
+                      items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
+
+          // (Removed visible "Current Batch from Firestore" section)
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -317,21 +350,31 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('Add'),
+                      child: const Text('Manage Batches'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: batches.map((batch) {
-                    return Chip(
-                      label: Text(batch),
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () => _deleteBatch(batch),
-                      backgroundColor: Colors.grey.shade200,
+                // Show chips for batches from Firestore
+                StreamBuilder<List<String>>(
+                  stream: _routineService.streamAllBatches(),
+                  builder: (context, snap) {
+                    final list = snap.data ?? [];
+                    if (list.isEmpty) {
+                      return const Text('No batches in Firestore');
+                    }
+                    return Wrap(
+                      spacing: 8,
+                      children: list.map((batch) {
+                        return Chip(
+                          label: Text(batch),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          onDeleted: () => _deleteBatch(batch),
+                          backgroundColor: Colors.grey.shade200,
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
+                  },
                 ),
               ],
             ),
@@ -354,6 +397,21 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   }
 
                   final routineDoc = snapshot.data;
+                  // Continuous sync: keep selectedBatch in sync with Firestore
+                  if (routineDoc != null) {
+                    final fbBatch = routineDoc.batch.trim();
+                    if (fbBatch.isNotEmpty && fbBatch != selectedBatch) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          if (!batches.contains(fbBatch)) {
+                            batches.insert(0, fbBatch);
+                          }
+                          selectedBatch = fbBatch;
+                        });
+                      });
+                    }
+                  }
                   final classes = routineDoc?.classes ?? [];
 
                   if (classes.isEmpty) {

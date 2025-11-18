@@ -6,8 +6,8 @@ import '../features/admin/manage_notices/manage_notices_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   '/dashboard': (_) => const AdminDashboardScreen(),
-  '/routines': (_) => const ManageRoutinesScreen(),
-  '/teachers': (_) => const ManageTeachersScreen(),
+  '/routines': (_) => const ManageRoutineScreen(),
+  '/teachers': (_) => const ManageTeacherScreen(),
   '/notices': (_) => const ManageNoticesScreen(),
 };
 

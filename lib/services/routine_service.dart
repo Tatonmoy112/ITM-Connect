@@ -36,6 +36,40 @@ class RoutineService {
     });
   }
 
+  // Stream unique batch values that exist in the routines collection
+  Stream<List<String>> streamAllBatches() {
+    return _firestore.collection(_collection).snapshots().map((snap) {
+      final batches = <String>{};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final b = (data['batch'] as String?)?.trim();
+        if (b != null && b.isNotEmpty) batches.add(b);
+      }
+      final list = batches.toList()..sort();
+      return list;
+    });
+  }
+
+  // Create an empty routine document for a given id, with batch and day set
+  Future<void> createEmptyRoutine(String id, String batch, String day) async {
+    final docRef = _firestore.collection(_collection).doc(id);
+    await docRef.set({
+      'batch': batch,
+      'day': day,
+      'classes': [],
+    });
+  }
+
+  // Delete all routine documents that belong to a batch
+  Future<void> deleteBatch(String batch) async {
+    final query = await _firestore.collection(_collection).where('batch', isEqualTo: batch).get();
+    final batchWrite = _firestore.batch();
+    for (final doc in query.docs) {
+      batchWrite.delete(doc.reference);
+    }
+    await batchWrite.commit();
+  }
+
   // Delete routine document
   Future<void> deleteRoutine(String id) async {
     try {
