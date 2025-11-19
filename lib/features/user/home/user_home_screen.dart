@@ -520,7 +520,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                                           ),
                                           const SizedBox(height: 10),
                                           Text(
-                                            '1,250',
+                                            '250+',
                                             style: theme.textTheme.headlineSmall?.copyWith(
                                               fontWeight: FontWeight.bold,
                                               color: const Color(0xFF43cea2),
@@ -616,7 +616,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                                           ),
                                           const SizedBox(height: 10),
                                           Text(
-                                            '72',
+                                            '20+',
                                             style: theme.textTheme.headlineSmall?.copyWith(
                                               fontWeight: FontWeight.bold,
                                               color: const Color(0xFFFFA500),
