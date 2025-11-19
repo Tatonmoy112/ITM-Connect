@@ -42,12 +42,14 @@ class Routine {
   final String id; // document id e.g. "6_Sat" or "56th_Sat"
   final String batch;
   final String day;
+  final String teacherInitial; // Teacher initial at routine document level
   final List<RoutineClass> classes;
 
   Routine({
     required this.id,
     required this.batch,
     required this.day,
+    required this.teacherInitial,
     required this.classes,
   });
 
@@ -57,6 +59,7 @@ class Routine {
         id: id,
         batch: '',
         day: '',
+        teacherInitial: '',
         classes: [],
       );
     }
@@ -84,6 +87,7 @@ class Routine {
       id: id,
       batch: map['batch'] ?? '',
       day: map['day'] ?? '',
+      teacherInitial: map['teacherInitial'] ?? '',
       classes: classes,
     );
   }
@@ -92,6 +96,7 @@ class Routine {
     return {
       'batch': batch,
       'day': day,
+      'teacherInitial': teacherInitial,
       'classes': classes.map((c) => c.toMap()).toList(),
     };
   }

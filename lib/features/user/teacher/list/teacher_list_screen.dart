@@ -341,20 +341,36 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         if (snapshot.hasError) {
           return Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Error loading routines: \\${snapshot.error}'),
+            child: Text('Error loading routines: ${snapshot.error}'),
           );
         }
         final routines = snapshot.data ?? [];
+        
+        // Get teacher's initials from their name
+        final teacherInitials = _getInitials(teacher.name);
+        
+        // Debug info
+        print('Teacher Name: "${teacher.name}" | Teacher Initials: "$teacherInitials"');
+        print('Total Routines: ${routines.length}');
+        
         // Group all classes for this teacher by full day name
         final Map<String, List<RoutineClass>> dayToClasses = {};
         for (final r in routines) {
-          for (final c in r.classes) {
-            // Match by teacherInitial (case-insensitive), fallback to teacher.id if needed
-            if (c.teacherInitial.trim().toLowerCase() == teacher.id.trim().toLowerCase()) {
-              dayToClasses.putIfAbsent(r.day, () => []).add(c);
-            }
+          print('Routine: Day="${r.day}" | Batch="${r.batch}" | Routine TeacherInitial="${r.teacherInitial}"');
+          
+          // Match by routine's teacherInitial with teacher's calculated initials (case-insensitive and trim whitespace)
+          final teacherInitialsNormalized = teacherInitials.trim().toLowerCase();
+          final routineTeacherNormalized = r.teacherInitial.trim().toLowerCase();
+          
+          print('  Comparing: "$routineTeacherNormalized" == "$teacherInitialsNormalized" -> ${routineTeacherNormalized == teacherInitialsNormalized}');
+          
+          if (routineTeacherNormalized == teacherInitialsNormalized) {
+            print('  ✓ ROUTINE MATCH FOUND!');
+            // Add all classes from this routine
+            dayToClasses.putIfAbsent(r.day, () => []).addAll(r.classes);
           }
         }
+        
         if (dayToClasses.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(16.0),
