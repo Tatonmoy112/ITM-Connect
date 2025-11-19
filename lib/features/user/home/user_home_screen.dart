@@ -162,7 +162,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: NetworkImage('https://i.imgur.com/1vOifiN.png'),
+                    image: AssetImage('assets/images/ITM_ALL.jpeg'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -243,7 +243,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                                   ),
                                 ],
                                 image: DecorationImage(
-                                  image: NetworkImage('https://i.imgur.com/ao4FFHe.png'),
+                                  image: AssetImage('assets/images/Ms. Nusrat Jahan.jfif'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -257,154 +257,428 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Header: Name + Members
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                              // ============ HEAD OF DEPARTMENT MESSAGE CARD ============
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: const Color(0xFF43cea2),
+                                      width: 4,
+                                    ),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Text(
-                                          'Welcome back,',
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: Colors.black54,
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF43cea2).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                            Icons.message_rounded,
+                                            color: Color(0xFF43cea2),
+                                            size: 24,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Ms. Nusrat Jahan',
-                                          style: theme.textTheme.headlineSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF2c3e50),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Head of Department',
+                                                style: theme.textTheme.bodySmall?.copyWith(
+                                                  color: Colors.black54,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Ms. Nusrat Jahan',
+                                                style: theme.textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: const Color(0xFF2c3e50),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      '"Welcome to the academic year. We are committed to excellence in education and fostering a vibrant learning community. Let\'s work together to achieve great milestones."',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: Colors.black87,
+                                        height: 1.5,
+                                      ),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Members',
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '489',
-                                          style: theme.textTheme.headlineSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.blue,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
 
-                              const SizedBox(height: 20),
-
-                              // Quick Action Cards (2x2 grid)
-                              GridView.count(
-                                crossAxisCount: 2,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 1.1,
-                                children: [
-                                  _buildActionCard(
-                                    theme,
-                                    'Notices',
-                                    '12 unread',
-                                    Icons.notifications_rounded,
-                                    Colors.indigo,
-                                  ),
-                                  _buildActionCard(
-                                    theme,
-                                    'Routines',
-                                    'View schedule',
-                                    Icons.schedule_rounded,
-                                    Colors.green,
-                                  ),
-                                  _buildActionCard(
-                                    theme,
-                                    'Teachers',
-                                    'Manage staff',
-                                    Icons.person_rounded,
-                                    Colors.teal,
-                                  ),
-                                  _buildActionCard(
-                                    theme,
-                                    'Feedback',
-                                    '4 new messages',
-                                    Icons.feedback_rounded,
-                                    Colors.orange,
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 24),
 
                               // Banner carousel
                               const BannerCarousel(),
 
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 28),
 
-                              // Activity section
+                              // ============ FEATURED ANNOUNCEMENTS SECTION ============
                               Text(
-                                'Activity',
+                                'Featured Announcements',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF2c3e50),
                                 ),
                               ),
 
+                              const SizedBox(height: 14),
+
+                              // Announcement Card 1
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFF667eea).withValues(alpha: 0.1),
+                                      const Color(0xFF764ba2).withValues(alpha: 0.05),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.notifications_active_rounded,
+                                        color: Color(0xFF667eea),
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Semester Examination Schedule',
+                                            style: theme.textTheme.labelLarge?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF2c3e50),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Exams start from 15th December 2025',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 16,
+                                      color: Colors.black26,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                               const SizedBox(height: 12),
 
-                              _buildActivityCard(
-                                theme,
-                                Icons.campaign_rounded,
-                                'New notice',
-                                'Semester guidelines released',
-                                '2 hours ago',
-                                Colors.indigo,
+                              // Announcement Card 2
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFFF093fb).withValues(alpha: 0.1),
+                                      const Color(0xFFf5576c).withValues(alpha: 0.05),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(0xFFF093fb).withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF093fb).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.assignment_rounded,
+                                        color: Color(0xFFF093fb),
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'New Course Registration',
+                                            style: theme.textTheme.labelLarge?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF2c3e50),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Advanced programming & Data Science courses now available',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 16,
+                                      color: Colors.black26,
+                                    ),
+                                  ],
+                                ),
                               ),
 
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 28),
 
-                              _buildActivityCard(
-                                theme,
-                                Icons.person_add_rounded,
-                                'New teacher',
-                                'Dr. A. Rahman joined ITM',
-                                'Yesterday',
-                                Colors.teal,
+                              // ============ QUICK STATS SECTION ============
+                              Text(
+                                'Department Overview',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF2c3e50),
+                                ),
                               ),
 
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 14),
 
-                              _buildActivityCard(
-                                theme,
-                                Icons.star_rounded,
-                                'Achievement',
-                                'ITM ranked #1 in Tech Innovation',
-                                '3 days ago',
-                                Colors.amber,
+                              // Stats Grid
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF43cea2).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(0xFF43cea2).withValues(alpha: 0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF43cea2).withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.people_rounded,
+                                              color: Color(0xFF43cea2),
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '1,250',
+                                            style: theme.textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF43cea2),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Students',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.book_rounded,
+                                              color: Color(0xFF667eea),
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '45',
+                                            style: theme.textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF667eea),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Courses',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFA500).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(0xFFFFA500).withValues(alpha: 0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFA500).withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.person_outline_rounded,
+                                              color: Color(0xFFFFA500),
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '72',
+                                            style: theme.textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFFFFA500),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Faculty',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00BCD4).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(0xFF00BCD4).withValues(alpha: 0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF00BCD4).withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.event_rounded,
+                                              color: Color(0xFF00BCD4),
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '28',
+                                            style: theme.textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF00BCD4),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Events',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
 
                               const SizedBox(height: 24),
@@ -420,125 +694,6 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildActionCard(
-    ThemeData theme,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1.5,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: Colors.black54,
-                    fontSize: 11,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActivityCard(
-    ThemeData theme,
-    IconData icon,
-    String title,
-    String description,
-    String time,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.black54,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            time,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.black38,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
