@@ -52,12 +52,38 @@ class Routine {
   });
 
   factory Routine.fromMap(String id, Map<String, dynamic>? map) {
-    final rawClasses = (map?['classes'] as List<dynamic>?) ?? [];
-    final classes = rawClasses.map((e) => RoutineClass.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+    if (map == null) {
+      return Routine(
+        id: id,
+        batch: '',
+        day: '',
+        classes: [],
+      );
+    }
+
+    final rawClasses = map['classes'];
+    List<RoutineClass> classes = [];
+
+    if (rawClasses != null && rawClasses is List) {
+      try {
+        classes = rawClasses.map((e) {
+          if (e is Map<String, dynamic>) {
+            return RoutineClass.fromMap(e);
+          } else if (e is Map) {
+            return RoutineClass.fromMap(Map<String, dynamic>.from(e));
+          }
+          return null;
+        }).whereType<RoutineClass>().toList();
+      } catch (e) {
+        print('Error parsing classes: $e');
+        classes = [];
+      }
+    }
+
     return Routine(
       id: id,
-      batch: map?['batch'] ?? '',
-      day: map?['day'] ?? '',
+      batch: map['batch'] ?? '',
+      day: map['day'] ?? '',
       classes: classes,
     );
   }

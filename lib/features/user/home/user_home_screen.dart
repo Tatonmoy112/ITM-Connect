@@ -854,9 +854,9 @@ class GlassCard extends StatelessWidget {
 }
 
 final List<String> bannerImages = [
-  'https://i.imgur.com/1vOifiN.png',
-  'https://i.imgur.com/lsx4Sjy.png',
-  'https://i.imgur.com/ao4FFHe.png',
+  'assets/images/ITM-1.JPG',
+  'assets/images/ITM-2.JPG',
+  'assets/images/ITM-3.JPG',
 ];
 
 class BannerCarousel extends StatefulWidget {
@@ -929,10 +929,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
               child: GlassCard( // Using GlassCard for carousel items
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
-                  child: Image.network(
+                  child: Image.asset(
                     bannerImages[index],
                     fit: BoxFit.cover,
-                    // width: 320, // Removed fixed width to allow scaling
                   ),
                 ),
               ),
