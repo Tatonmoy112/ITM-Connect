@@ -30,22 +30,21 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
     final pdf = pw.Document();
     final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-    final headers = ['Day', 'Course', 'Time Slot', 'Room', 'Teacher Initial'];
 
     final image = pw.MemoryImage(
       (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
     );
 
     // Fetch all routine data from Firebase first
-    final List<List<String>> allTableData = [];
+    final Map<String, List<List<String>>> classesByDay = {};
     for (final day in days) {
       final routineId = '${selectedBatch}_$day';
       final routine = await _routineService.getRoutine(routineId);
 
       if (routine != null && routine.classes.isNotEmpty) {
+        classesByDay[day] = [];
         for (final classItem in routine.classes) {
-          allTableData.add([
-            day,
+          classesByDay[day]!.add([
             '${classItem.courseName} (${classItem.courseCode})',
             classItem.time,
             classItem.room,
@@ -74,30 +73,48 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
           ),
         ),
         build: (context) {
-          if (allTableData.isEmpty) {
+          if (classesByDay.isEmpty) {
             return [pw.Center(child: pw.Text('No routine available for this batch.'))];
           }
           
-          return [
-            pw.Table.fromTextArray(
-              headers: headers,
-              data: allTableData,
-              headerStyle: boldStyle.copyWith(color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(
-                color: PdfColors.teal700,
-              ),
-              cellAlignment: pw.Alignment.center,
-              cellStyle: const pw.TextStyle(fontSize: 10),
-              border: pw.TableBorder.all(),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(1.5),
-                1: const pw.FlexColumnWidth(3),
-                2: const pw.FlexColumnWidth(2.5),
-                3: const pw.FlexColumnWidth(1.5),
-                4: const pw.FlexColumnWidth(1.5),
-              },
-            ),
-          ];
+          final widgets = <pw.Widget>[];
+          
+          // Create separate table for each day
+          for (final day in days) {
+            final dayClasses = classesByDay[day];
+            
+            if (dayClasses != null && dayClasses.isNotEmpty) {
+              widgets.add(
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(day, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
+                    pw.SizedBox(height: 5),
+                    pw.Table.fromTextArray(
+                      headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
+                      data: dayClasses,
+                      headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                      headerDecoration: const pw.BoxDecoration(
+                        color: PdfColors.teal700,
+                      ),
+                      cellAlignment: pw.Alignment.center,
+                      cellStyle: const pw.TextStyle(fontSize: 9),
+                      border: pw.TableBorder.all(),
+                      columnWidths: {
+                        0: const pw.FlexColumnWidth(3),
+                        1: const pw.FlexColumnWidth(2.5),
+                        2: const pw.FlexColumnWidth(1.5),
+                        3: const pw.FlexColumnWidth(1.5),
+                      },
+                    ),
+                    pw.SizedBox(height: 15),
+                  ],
+                ),
+              );
+            }
+          }
+          
+          return widgets;
         },
       ),
     );

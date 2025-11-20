@@ -1,15 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:pdf/pdf.dart';
 import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 
 class TeacherListScreen extends StatefulWidget {
   const TeacherListScreen({super.key});
@@ -89,163 +91,178 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     }
   }
 
-  // Generate and save PDF for teacher's full routine
+  // Generate and save PDF for teacher's routine (current day format like class routine)
   Future<void> _generateTeacherPDF(Teacher teacher) async {
     try {
-      // Get all routines
+      final pdf = pw.Document();
+      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+
+      final image = pw.MemoryImage(
+        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+      );
+
       final routineService = RoutineService();
-      final routines = await routineService.streamAllRoutines().first;
-      
       final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
       
-      // Collect all matching classes by day
-      final Map<String, List<RoutineClass>> dayToClasses = {};
+      // Collect all classes for the full week
+      final List<List<String>> fullWeekTableData = [];
       
       final dayMap = {
-        'sat': 'Saturday',
-        'sun': 'Sunday',
-        'mon': 'Monday',
-        'tue': 'Tuesday',
-        'wed': 'Wednesday',
-        'thu': 'Thursday',
-        'fri': 'Friday',
+        'Sat': 'Saturday',
+        'Sun': 'Sunday',
+        'Mon': 'Monday',
+        'Tue': 'Tuesday',
+        'Wed': 'Wednesday',
+        'Thu': 'Thursday',
+        'Fri': 'Friday',
       };
       
-      for (final r in routines) {
-        if (r.classes.isEmpty) continue;
-        
-        for (final routineClass in r.classes) {
-          final classTeacherInitial = routineClass.teacherInitial.trim().toUpperCase();
+      final daysOrder = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+      // Fetch routines for each batch and day to find all classes for this teacher
+      // First, get all batches from Firestore by fetching routines
+      final allRoutines = await routineService.streamAllRoutines().first;
+      final batchesSet = <String>{};
+      
+      for (final routine in allRoutines) {
+        if (routine.batch.isNotEmpty) {
+          batchesSet.add(routine.batch);
+        }
+      }
+      
+      print('DEBUG: Teacher searching - Name: ${teacher.name}, Initials: $teacherInitials');
+      print('DEBUG: Found batches: $batchesSet');
+
+      // Now fetch each batch's routine for each day
+      for (final day in daysOrder) {
+        for (final batch in batchesSet) {
+          final routineId = '${batch}_$day';
+          print('DEBUG: Fetching routine: $routineId');
           
-          if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
-            final fullDay = dayMap[r.day.toLowerCase().trim()] ?? r.day;
-            dayToClasses.putIfAbsent(fullDay, () => []).add(routineClass);
+          final routine = await routineService.getRoutine(routineId);
+          
+          if (routine != null && routine.classes.isNotEmpty) {
+            print('DEBUG: Found routine $routineId with ${routine.classes.length} classes');
+            
+            for (final classItem in routine.classes) {
+              final classTeacherInitial = classItem.teacherInitial.trim().toUpperCase();
+              print('DEBUG: Checking class ${classItem.courseName}, teacher: $classTeacherInitial vs $teacherInitials');
+              
+              if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+                fullWeekTableData.add([
+                  dayMap[day] ?? day,
+                  '${classItem.courseName} (${classItem.courseCode})',
+                  classItem.time,
+                  classItem.room,
+                  batch,
+                ]);
+                print('DEBUG: ✓ Added class: ${classItem.courseName} on $day');
+              }
+            }
           }
         }
       }
       
-      if (dayToClasses.isEmpty) {
+      print('DEBUG: Total classes collected: ${fullWeekTableData.length}');
+      for (final row in fullWeekTableData) {
+        print('  - $row');
+      }
+      
+      if (fullWeekTableData.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No classes found for this teacher.')),
+            const SnackBar(content: Text('No classes scheduled for this teacher.')),
           );
         }
         return;
       }
-      
-      // Create PDF document
-      final pdf = pw.Document();
-      
-      // Days in order
-      final daysOrder = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      
-      // Add first page with teacher info
+
+      // Add page with teacher info and full week routine
       pdf.addPage(
-        pw.Page(
+        pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          build: (context) => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Teacher Schedule',
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text('Name: ${teacher.name}', style: const pw.TextStyle(fontSize: 14)),
-              pw.Text('Role: ${teacher.role}', style: const pw.TextStyle(fontSize: 14)),
-              pw.Text('Email: ${teacher.email}', style: const pw.TextStyle(fontSize: 14)),
-              pw.Text('ID: ${teacher.id}', style: const pw.TextStyle(fontSize: 14)),
-              pw.SizedBox(height: 30),
-              pw.Text(
-                'Weekly Routine',
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      );
-      
-      // Add a page for each day that has classes
-      for (final day in daysOrder) {
-        if (!dayToClasses.containsKey(day)) continue;
-        
-        final classesToday = dayToClasses[day] ?? [];
-        
-        pdf.addPage(
-          pw.Page(
-            pageFormat: PdfPageFormat.a4,
-            build: (context) => pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          header: (context) => pw.Center(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Text(
-                  day,
-                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
-                ),
+                pw.Image(image, width: 80, height: 80),
+                pw.SizedBox(height: 10),
+                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
+                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
+                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
                 pw.SizedBox(height: 15),
-                pw.Table(
-                  border: pw.TableBorder.all(),
-                  columnWidths: {
-                    0: const pw.FlexColumnWidth(2),
-                    1: const pw.FlexColumnWidth(1.5),
-                    2: const pw.FlexColumnWidth(1.5),
-                    3: const pw.FlexColumnWidth(1),
-                  },
-                  children: [
-                    // Header row
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
-                      children: [
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
-                          child: pw.Text('Course Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        ),
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
-                          child: pw.Text('Code', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        ),
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
-                          child: pw.Text('Time', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        ),
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
-                          child: pw.Text('Room', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                    // Data rows
-                    ...classesToday.map((c) {
-                      return pw.TableRow(
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.courseName)),
-                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.courseCode)),
-                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.time)),
-                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.room)),
-                        ],
-                      );
-                    }).toList(),
-                  ],
-                ),
+                pw.Text('Teacher Routine Schedule', style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline)),
+                pw.SizedBox(height: 10),
+                pw.Text('Name: ${teacher.name}', style: boldStyle.copyWith(fontSize: 12)),
+                pw.Text('Email: ${teacher.email}', style: boldStyle.copyWith(fontSize: 11)),
+                pw.Text('Role: ${teacher.role}', style: boldStyle.copyWith(fontSize: 12)),
+                pw.SizedBox(height: 5),
+                pw.Text('Full Week Routine', style: boldStyle.copyWith(fontSize: 12)),
+                pw.SizedBox(height: 10),
               ],
             ),
           ),
-        );
-      }
-      
+          build: (context) {
+            final widgets = <pw.Widget>[];
+            
+            // Group classes by day
+            final Map<String, List<List<String>>> classesByDay = {};
+            for (final row in fullWeekTableData) {
+              final day = row[0];
+              if (!classesByDay.containsKey(day)) {
+                classesByDay[day] = [];
+              }
+              // Add row without day column (since we'll show it as header)
+              classesByDay[day]!.add([row[1], row[2], row[3], row[4]]);
+            }
+            
+            // Create separate table for each day
+            for (final day in daysOrder) {
+              final fullDay = dayMap[day] ?? day;
+              final dayClasses = classesByDay[fullDay];
+              
+              if (dayClasses != null && dayClasses.isNotEmpty) {
+                widgets.add(
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(fullDay, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
+                      pw.SizedBox(height: 5),
+                      pw.Table.fromTextArray(
+                        headers: ['Course', 'Time Slot', 'Room', 'Batch'],
+                        data: dayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerDecoration: const pw.BoxDecoration(
+                          color: PdfColors.teal700,
+                        ),
+                        cellAlignment: pw.Alignment.center,
+                        cellStyle: const pw.TextStyle(fontSize: 9),
+                        border: pw.TableBorder.all(),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(2.5),
+                          1: const pw.FlexColumnWidth(1.8),
+                          2: const pw.FlexColumnWidth(1.2),
+                          3: const pw.FlexColumnWidth(1),
+                        },
+                      ),
+                      pw.SizedBox(height: 15),
+                    ],
+                  ),
+                );
+              }
+            }
+            
+            return widgets;
+          },
+        ),
+      );
+
       // Save PDF to device
-      final output = await getApplicationDocumentsDirectory();
-      final fileName = '${teacher.name.replaceAll(' ', '_')}_routine.pdf';
+      final output = await getTemporaryDirectory();
+      final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
       final file = File('${output.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PDF saved successfully!'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      await OpenFilex.open(file.path);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
