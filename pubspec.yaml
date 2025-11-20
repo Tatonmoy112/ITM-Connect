@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
 
   # ✅ UI & Design Libraries
   flutter_animate: ^4.2.0
