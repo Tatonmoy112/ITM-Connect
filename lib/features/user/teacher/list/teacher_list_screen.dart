@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
@@ -76,20 +74,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   // PDF generation and per-teacher routine export were removed because
   // this screen now uses Firestore for teachers and routines are stored
   // in the separate `routines` collection. PDF export can be added later.
-
-  // Email Launcher
-  Future<void> _launchEmail(String emailAddress) async {
-    final Uri emailLaunchUri = Uri(scheme: 'mailto', path: emailAddress);
-    if (await canLaunchUrl(emailLaunchUri)) {
-      await launchUrl(emailLaunchUri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch email client for $emailAddress')),
-        );
-      }
-    }
-  }
 
   // Generate and save PDF for teacher's routine (current day format like class routine)
   Future<void> _generateTeacherPDF(Teacher teacher) async {
@@ -337,7 +321,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(0),
+                  padding: const EdgeInsets.all(16),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final teacher = filtered[index];
@@ -353,29 +337,67 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                           }
                         });
                       },
-                      child: Card(
-                        clipBehavior: Clip.antiAlias,
-                        color: Colors.white,
-                        elevation: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOut,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            children: [
-                              // Collapsed View
-                              Row(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Teal Header
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.teal,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          teacher.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          teacher.role,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Teacher Avatar
                                   CircleAvatar(
-                                    radius: 30,
-                                    backgroundColor: Colors.blueGrey,
-                                    // Choose image provider safely: network if http(s), asset if local asset path, else show initials
+                                    radius: 28,
+                                    backgroundColor: Colors.white.withOpacity(0.2),
                                     backgroundImage: (() {
                                       final url = teacher.imageUrl.trim();
                                       if (url.isEmpty) return null;
@@ -384,85 +406,96 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                         if (lower.startsWith('http://') || lower.startsWith('https://')) {
                                           return NetworkImage(url);
                                         }
-                                        if (lower.startsWith('assets/') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
-                                          return AssetImage(url) as ImageProvider;
-                                        }
                                       } catch (_) {}
                                       return null;
                                     })(),
                                     child: (teacher.imageUrl.trim().isEmpty)
-                                        ? Text(_getInitials(teacher.name), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))
+                                        ? Text(
+                                            _getInitials(teacher.name),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          )
                                         : null,
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(teacher.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 4),
-                                        Text(teacher.role, style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                                      ],
-                                    ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    isSelected ? Icons.expand_less : Icons.expand_more,
+                                    color: Colors.white,
                                   ),
-                                  Icon(isSelected ? Icons.expand_less : Icons.expand_more),
                                 ],
                               ),
-
-                              // Expanded View
-                              if (isSelected)
-                                Column(
-                                  children: [
-                                    const Divider(height: 24),
-                                    // Email Section
-                                    ListTile(
-                                      leading: const Icon(Icons.email_outlined, color: Colors.blueGrey),
-                                      title: Text(teacher.email),
-                                      onTap: () => _launchEmail(teacher.email),
-                                      dense: true,
-                                    ),
-                                    const Divider(),
-                                    // Action Buttons (disabled for now)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: const Icon(Icons.visibility_outlined),
-                                              label: const Text('Daily Routine'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.teal,
-                                                foregroundColor: Colors.white,
-                                              ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  if (_showDailyRoutineIndex == index) {
-                                                    _showDailyRoutineIndex = null;
-                                                  } else {
-                                                    _showDailyRoutineIndex = index;
-                                                  }
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: const Icon(Icons.picture_as_pdf_outlined),
-                                              label: const Text('Get Full PDF'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.deepOrange,
-                                                foregroundColor: Colors.white,
-                                              ),
-                                              onPressed: () {
-                                                _generateTeacherPDF(teacher);
-                                              },
-                                            ),
-                                          ),
-                                        ],
+                            ),
+                            // Content
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.email, size: 16, color: Colors.teal),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          teacher.email,
+                                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  // Expanded View
+                                  if (isSelected) ...[
+                                    const SizedBox(height: 16),
+                                    // Action Buttons
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            icon: const Icon(Icons.visibility_outlined, size: 16),
+                                            label: const Text('Daily Routine'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.teal,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                if (_showDailyRoutineIndex == index) {
+                                                  _showDailyRoutineIndex = null;
+                                                } else {
+                                                  _showDailyRoutineIndex = index;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                                            label: const Text('Get PDF'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.deepOrange,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              _generateTeacherPDF(teacher);
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     // Daily routine area (from Firestore)
                                     if (_showDailyRoutineIndex == index) ...[
@@ -472,9 +505,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                       _buildTeacherRoutineWidget(teacher),
                                     ],
                                   ],
-                                ),
-                            ],
-                          ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );

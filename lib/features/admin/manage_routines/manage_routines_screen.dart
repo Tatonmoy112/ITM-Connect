@@ -72,112 +72,284 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     final time = TextEditingController(text: routine?['time']);
     final teacherInitial = TextEditingController(text: routine?['teacherInitial']);
 
-    final formKey = GlobalKey<FormState>();
+    bool showCourseNameError = false;
+    bool showCourseCodeError = false;
+    bool showTeacherError = false;
+    bool showTeacherInitialError = false;
+    bool showRoomError = false;
+    bool showTimeError = false;
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(routine == null ? 'Add Class' : 'Edit Class'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
+      builder: (_) {
+        return StatefulBuilder(builder: (context, setModalState) {
+          return Dialog(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: courseName,
-                  decoration: const InputDecoration(labelText: 'Course Name'),
-                  validator: (value) => value!.isEmpty ? 'Required field' : null,
+                // Teal Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.teal,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              routine == null ? 'Add Class' : 'Edit Class',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (routine != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Code: ${routine['courseCode'] ?? 'N/A'}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                TextFormField(
-                  controller: courseCode,
-                  decoration: const InputDecoration(labelText: 'Course Code'),
-                  validator: (value) => value!.isEmpty ? 'Required field' : null,
+                // Form Content
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SingleChildScrollView(
+                    child: SizedBox(
+                      width: 450,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Course Name
+                          TextField(
+                            controller: courseName,
+                            decoration: InputDecoration(
+                              labelText: 'Course Name',
+                              prefixIcon: const Icon(Icons.book),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showCourseNameError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Course Code
+                          TextField(
+                            controller: courseCode,
+                            decoration: InputDecoration(
+                              labelText: 'Course Code',
+                              prefixIcon: const Icon(Icons.code),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showCourseCodeError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Teacher Name
+                          TextField(
+                            controller: teacher,
+                            decoration: InputDecoration(
+                              labelText: 'Teacher Name',
+                              prefixIcon: const Icon(Icons.person),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showTeacherError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Teacher Initial
+                          TextField(
+                            controller: teacherInitial,
+                            decoration: InputDecoration(
+                              labelText: 'Teacher Initial',
+                              prefixIcon: const Icon(Icons.badge),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showTeacherInitialError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Room
+                          TextField(
+                            controller: room,
+                            decoration: InputDecoration(
+                              labelText: 'Room Number',
+                              prefixIcon: const Icon(Icons.location_on),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showRoomError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Time
+                          TextField(
+                            controller: time,
+                            decoration: InputDecoration(
+                              labelText: 'Time (e.g. 8:30 AM - 10:00 AM)',
+                              prefixIcon: const Icon(Icons.schedule),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              errorText: showTimeError ? 'Required' : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                TextFormField(
-                  controller: teacher,
-                  decoration: const InputDecoration(labelText: 'Teacher Name'),
-                  validator: (value) => value!.isEmpty ? 'Required field' : null,
-                ),
-                TextFormField(
-                  controller: teacherInitial,
-                  decoration: const InputDecoration(labelText: 'Teacher Initial (unique)'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Required';
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: room,
-                  decoration: const InputDecoration(labelText: 'Room Number'),
-                  validator: (value) => value!.isEmpty ? 'Required field' : null,
-                ),
-                TextFormField(
-                  controller: time,
-                  decoration: const InputDecoration(labelText: 'Time (e.g. 8:30 AM - 10:00 AM)'),
-                  validator: (value) => value!.isEmpty ? 'Required field' : null,
+                // Buttons Footer
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : () => Navigator.pop(context),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                final cName = courseName.text.trim();
+                                final cCode = courseCode.text.trim();
+                                final tName = teacher.text.trim();
+                                final tInitial = teacherInitial.text.trim().toUpperCase();
+                                final rRoom = room.text.trim();
+                                final tTime = time.text.trim();
+
+                                setModalState(() {
+                                  showCourseNameError = cName.isEmpty;
+                                  showCourseCodeError = cCode.isEmpty;
+                                  showTeacherError = tName.isEmpty;
+                                  showTeacherInitialError = tInitial.isEmpty;
+                                  showRoomError = rRoom.isEmpty;
+                                  showTimeError = tTime.isEmpty;
+                                });
+
+                                if (showCourseNameError ||
+                                    showCourseCodeError ||
+                                    showTeacherError ||
+                                    showTeacherInitialError ||
+                                    showRoomError ||
+                                    showTimeError) {
+                                  return;
+                                }
+
+                                setModalState(() => isLoading = true);
+
+                                final newClass = RoutineClass(
+                                  courseName: cName,
+                                  courseCode: cCode,
+                                  teacherName: tName,
+                                  teacherInitial: tInitial,
+                                  room: rRoom,
+                                  time: tTime,
+                                );
+
+                                final docId = _docId();
+
+                                try {
+                                  // Check for duplicates within the existing routine
+                                  final existingRoutine = await _routineService.getRoutine(docId);
+                                  final existingClasses = existingRoutine?.classes ?? [];
+
+                                  final isDuplicate = existingClasses.any((c) =>
+                                      c.teacherInitial == newClass.teacherInitial &&
+                                      ((routine == null) || (existingClasses.indexOf(c) != index)));
+
+                                  if (isDuplicate) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Teacher initial already exists in this routine')),
+                                      );
+                                    }
+                                    setModalState(() => isLoading = false);
+                                    return;
+                                  }
+
+                                  if (routine == null) {
+                                    await _routineService.addClass(docId, newClass);
+                                  } else {
+                                    // update by index
+                                    await _routineService.updateClass(docId, index!, newClass);
+                                  }
+
+                                  if (mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(routine == null ? 'Class added successfully' : 'Class updated successfully'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setModalState(() => isLoading = false);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: ${e.toString()}')),
+                                    );
+                                  }
+                                }
+                              },
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(
+                                routine == null ? 'Add Class' : 'Save',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-
-              final newClass = RoutineClass(
-                courseName: courseName.text.trim(),
-                courseCode: courseCode.text.trim(),
-                teacherName: teacher.text.trim(),
-                teacherInitial: teacherInitial.text.trim(),
-                room: room.text.trim(),
-                time: time.text.trim(),
-              );
-
-              final docId = _docId();
-
-              try {
-                // Check for duplicates within the existing routine
-                final existingRoutine = await _routineService.getRoutine(docId);
-                final existingClasses = existingRoutine?.classes ?? [];
-
-                final isDuplicate = existingClasses.any((c) =>
-                    c.teacherInitial == newClass.teacherInitial &&
-                    ((routine == null) || (existingClasses.indexOf(c) != index)));
-
-                if (isDuplicate) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Teacher initial already exists in this routine')),
-                  );
-                  return;
-                }
-
-                if (routine == null) {
-                  await _routineService.addClass(docId, newClass);
-                } else {
-                  // update by index
-                  await _routineService.updateClass(docId, index!, newClass);
-                }
-
-                if (mounted) Navigator.pop(context);
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
-                  );
-                }
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+          );
+        });
+      },
     );
   }
 
@@ -277,7 +449,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: StreamBuilder<List<String>>(
               stream: _routineService.streamAllBatches(),
               builder: (context, snap) {
@@ -297,22 +469,52 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   batches = List<String>.from(batchList);
                 }
 
-                return Row(
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    DropdownButton<String>(
-                      value: selectedDay,
-                      onChanged: (val) => setState(() => selectedDay = val!),
-                      items: days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                    ),
-                    const SizedBox(width: 20),
-                    DropdownButton<String>(
-                      value: batchList.contains(selectedBatch) ? selectedBatch : null,
-                      hint: const Text('Select batch'),
-                      onChanged: (val) {
-                        if (val == null) return;
-                        setState(() => selectedBatch = val);
-                      },
-                      items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                    // Dropdown Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              value: selectedDay,
+                              onChanged: (val) => setState(() => selectedDay = val!),
+                              items: days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              value: batchList.contains(selectedBatch) ? selectedBatch : null,
+                              hint: const Text('Select batch'),
+                              onChanged: (val) {
+                                if (val == null) return;
+                                setState(() => selectedBatch = val);
+                              },
+                              items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 );
@@ -320,14 +522,21 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
             ),
           ),
 
-          // (Removed visible "Current Batch from Firestore" section)
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
+                const Text(
+                  'Manage Batches',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Create Batch Section
                 Row(
                   children: [
                     Expanded(
@@ -335,41 +544,113 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                         controller: _batchController,
                         decoration: InputDecoration(
                           hintText: 'Enter new batch (e.g. 61st)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                          prefixIcon: const Icon(Icons.add_circle_outline),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: _addBatch,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: _addBatch,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Create'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
-                      child: const Text('Create batch'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Show chips for batches from Firestore
+                const SizedBox(height: 14),
+                // Show cards for batches from Firestore
                 StreamBuilder<List<String>>(
                   stream: _routineService.streamAllBatches(),
                   builder: (context, snap) {
                     final list = snap.data ?? [];
                     if (list.isEmpty) {
-                      return const Text('No batches in Firestore');
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'No batches created yet',
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
                     }
                     return Wrap(
-                      spacing: 8,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: list.map((batch) {
-                        return Chip(
-                          label: Text(batch),
-                          deleteIcon: const Icon(Icons.close, size: 18),
-                          onDeleted: () => _deleteBatch(batch),
-                          backgroundColor: Colors.grey.shade200,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.teal.withOpacity(0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.class_, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                batch,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _deleteBatch(batch),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         );
                       }).toList(),
                     );
@@ -424,118 +705,217 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                       final cls = classes[index];
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(bottom: 20),
+                        margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Teal Header
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.teal,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          cls.courseName,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Code: ${cls.courseCode}',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
                                     child: Text(
-                                      cls.courseName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      cls.courseCode,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.indigo.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(cls.courseCode, style: const TextStyle(fontSize: 12, color: Colors.indigo)),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
-                              Row(
+                            ),
+                            // Content
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.person, size: 16, color: Colors.black54),
-                                  const SizedBox(width: 6),
-                                  Expanded(child: Text(cls.teacherName, style: const TextStyle(fontSize: 14))),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text('Initial: ${cls.teacherInitial}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.person, size: 16, color: Colors.teal),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Teacher',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                                            ),
+                                            Text(
+                                              cls.teacherName,
+                                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          cls.teacherInitial,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.teal,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Room',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                                            ),
+                                            Text(
+                                              cls.room,
+                                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Time',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                                            ),
+                                            Text(
+                                              cls.time,
+                                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      SizedBox(
+                                        height: 36,
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.orange,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                          ),
+                                          onPressed: () => _showRoutineForm(routine: {
+                                            'courseName': cls.courseName,
+                                            'courseCode': cls.courseCode,
+                                            'teacher': cls.teacherName,
+                                            'teacherInitial': cls.teacherInitial,
+                                            'room': cls.room,
+                                            'time': cls.time,
+                                          }, index: index),
+                                          icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+                                          label: const Text(
+                                            'Edit',
+                                            style: TextStyle(color: Colors.white, fontSize: 13),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      SizedBox(
+                                        height: 36,
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                          ),
+                                          onPressed: () => _deleteRoutine(index),
+                                          icon: const Icon(Icons.delete, size: 18, color: Colors.white),
+                                          label: const Text(
+                                            'Delete',
+                                            style: TextStyle(color: Colors.white, fontSize: 13),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.meeting_room, size: 14, color: Colors.green),
-                                        const SizedBox(width: 6),
-                                        Text(cls.room, style: const TextStyle(fontSize: 12, color: Colors.green)),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.access_time, size: 14, color: Colors.blue),
-                                        const SizedBox(width: 6),
-                                        Text(cls.time, style: const TextStyle(fontSize: 12, color: Colors.blue)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  TextButton.icon(
-                                    icon: const Icon(Icons.edit, color: Colors.orange),
-                                    label: const Text('Edit', style: TextStyle(color: Colors.orange)),
-                                    onPressed: () => _showRoutineForm(routine: {
-                                      'courseName': cls.courseName,
-                                      'courseCode': cls.courseCode,
-                                      'teacher': cls.teacherName,
-                                      'teacherInitial': cls.teacherInitial,
-                                      'room': cls.room,
-                                      'time': cls.time,
-                                    }, index: index),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  TextButton.icon(
-                                    style: TextButton.styleFrom(
-                                      backgroundColor: Colors.red.shade50,
-                                      foregroundColor: Colors.red,
-                                    ),
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                    onPressed: () => _deleteRoutine(index),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -548,7 +928,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
       ),
 
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Colors.teal.shade600,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Add Routine'),
