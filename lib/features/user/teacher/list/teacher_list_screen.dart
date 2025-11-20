@@ -6,6 +6,10 @@ import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class TeacherListScreen extends StatefulWidget {
   const TeacherListScreen({super.key});
@@ -80,6 +84,175 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not launch email client for $emailAddress')),
+        );
+      }
+    }
+  }
+
+  // Generate and save PDF for teacher's full routine
+  Future<void> _generateTeacherPDF(Teacher teacher) async {
+    try {
+      // Get all routines
+      final routineService = RoutineService();
+      final routines = await routineService.streamAllRoutines().first;
+      
+      final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
+      
+      // Collect all matching classes by day
+      final Map<String, List<RoutineClass>> dayToClasses = {};
+      
+      final dayMap = {
+        'sat': 'Saturday',
+        'sun': 'Sunday',
+        'mon': 'Monday',
+        'tue': 'Tuesday',
+        'wed': 'Wednesday',
+        'thu': 'Thursday',
+        'fri': 'Friday',
+      };
+      
+      for (final r in routines) {
+        if (r.classes.isEmpty) continue;
+        
+        for (final routineClass in r.classes) {
+          final classTeacherInitial = routineClass.teacherInitial.trim().toUpperCase();
+          
+          if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+            final fullDay = dayMap[r.day.toLowerCase().trim()] ?? r.day;
+            dayToClasses.putIfAbsent(fullDay, () => []).add(routineClass);
+          }
+        }
+      }
+      
+      if (dayToClasses.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No classes found for this teacher.')),
+          );
+        }
+        return;
+      }
+      
+      // Create PDF document
+      final pdf = pw.Document();
+      
+      // Days in order
+      final daysOrder = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      
+      // Add first page with teacher info
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Teacher Schedule',
+                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Name: ${teacher.name}', style: const pw.TextStyle(fontSize: 14)),
+              pw.Text('Role: ${teacher.role}', style: const pw.TextStyle(fontSize: 14)),
+              pw.Text('Email: ${teacher.email}', style: const pw.TextStyle(fontSize: 14)),
+              pw.Text('ID: ${teacher.id}', style: const pw.TextStyle(fontSize: 14)),
+              pw.SizedBox(height: 30),
+              pw.Text(
+                'Weekly Routine',
+                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+      
+      // Add a page for each day that has classes
+      for (final day in daysOrder) {
+        if (!dayToClasses.containsKey(day)) continue;
+        
+        final classesToday = dayToClasses[day] ?? [];
+        
+        pdf.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4,
+            build: (context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  day,
+                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 15),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(2),
+                    1: const pw.FlexColumnWidth(1.5),
+                    2: const pw.FlexColumnWidth(1.5),
+                    3: const pw.FlexColumnWidth(1),
+                  },
+                  children: [
+                    // Header row
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Course Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Code', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Time', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Room', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    // Data rows
+                    ...classesToday.map((c) {
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.courseName)),
+                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.courseCode)),
+                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.time)),
+                          pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(c.room)),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      
+      // Save PDF to device
+      final output = await getApplicationDocumentsDirectory();
+      final fileName = '${teacher.name.replaceAll(' ', '_')}_routine.pdf';
+      final file = File('${output.path}/$fileName');
+      await file.writeAsBytes(await pdf.save());
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF saved successfully!'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -267,8 +440,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                 foregroundColor: Colors.white,
                                               ),
                                               onPressed: () {
-                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                                    content: Text('PDF export not available for Firestore-driven teachers.')));
+                                                _generateTeacherPDF(teacher);
                                               },
                                             ),
                                           ),
