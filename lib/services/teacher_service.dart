@@ -7,12 +7,17 @@ class TeacherService {
       return teachersCollection.snapshots().map((snapshot) {
         return snapshot.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
+          
+          // Get teacherInitial: prefer Firestore field, fallback to doc.id
+          String teacherInitial = (data['teacherInitial'] ?? doc.id ?? '').toString().trim();
+          
           return Teacher(
             id: doc.id,
             name: data['name'] ?? '',
             email: data['email'] ?? '',
             role: data['role'] ?? '',
             imageUrl: data['imageUrl'] ?? '',
+            teacherInitial: teacherInitial,
           );
         }).toList();
       });

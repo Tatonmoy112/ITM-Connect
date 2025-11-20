@@ -42,12 +42,12 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     if (name.trim().isEmpty) return '';
     final nameParts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (nameParts.isEmpty) return '';
+    // Take the first letter of EACH word (not just first and last)
     String initials = '';
-    if (nameParts[0].isNotEmpty) {
-      initials += nameParts[0][0];
-    }
-    if (nameParts.length > 1 && nameParts[nameParts.length - 1].isNotEmpty) {
-      initials += nameParts[nameParts.length - 1][0];
+    for (final part in nameParts) {
+      if (part.isNotEmpty) {
+        initials += part[0];
+      }
     }
     return initials.toUpperCase();
   }
@@ -346,28 +346,65 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         }
         final routines = snapshot.data ?? [];
         
-        // Get teacher's initials from their name
-        final teacherInitials = _getInitials(teacher.name);
-        
+        // Get teacher's teacherInitial from Firestore (uppercase for comparison)
+        final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
+
         // Debug info
-        print('Teacher Name: "${teacher.name}" | Teacher Initials: "$teacherInitials"');
+        print('=== TEACHER ROUTINE MATCHING ===');
+        print('Teacher ID: "${teacher.id}"');
+        print('Teacher Name: "${teacher.name}"');
+        print('Teacher TeacherInitial (raw): "${teacher.teacherInitial}"');
+        print('Teacher TeacherInitial (uppercase): "$teacherInitials"');
+        print('Is teacherInitial empty? ${teacherInitials.isEmpty}');
         print('Total Routines: ${routines.length}');
+        
+        // Helper function to convert short day names to full names
+        String getFullDayName(String shortDay) {
+          final dayMap = {
+            'sat': 'Saturday',
+            'sun': 'Sunday',
+            'mon': 'Monday',
+            'tue': 'Tuesday',
+            'wed': 'Wednesday',
+            'thu': 'Thursday',
+            'fri': 'Friday',
+          };
+          final lower = shortDay.toLowerCase().trim();
+          return dayMap[lower] ?? shortDay; // Return full name or original if not found
+        }
         
         // Group all classes for this teacher by full day name
         final Map<String, List<RoutineClass>> dayToClasses = {};
         for (final r in routines) {
-          print('Routine: Day="${r.day}" | Batch="${r.batch}" | Routine TeacherInitial="${r.teacherInitial}"');
+          print('\nRoutine ID: "${r.id}" | Day="${r.day}" | Batch="${r.batch}" | Classes count: ${r.classes.length}');
           
-          // Match by routine's teacherInitial with teacher's calculated initials (case-insensitive and trim whitespace)
-          final teacherInitialsNormalized = teacherInitials.trim().toLowerCase();
-          final routineTeacherNormalized = r.teacherInitial.trim().toLowerCase();
+          // If routine has no classes, skip it
+          if (r.classes.isEmpty) {
+            print('  Skipping routine with no classes');
+            continue;
+          }
           
-          print('  Comparing: "$routineTeacherNormalized" == "$teacherInitialsNormalized" -> ${routineTeacherNormalized == teacherInitialsNormalized}');
+          // Convert day to full name (e.g., "sat" → "Saturday")
+          final fullDay = getFullDayName(r.day);
+          print('  Day converted: "${r.day}" → "$fullDay"');
           
-          if (routineTeacherNormalized == teacherInitialsNormalized) {
-            print('  ✓ ROUTINE MATCH FOUND!');
-            // Add all classes from this routine
-            dayToClasses.putIfAbsent(r.day, () => []).addAll(r.classes);
+          // Check each class in the routine
+          for (final routineClass in r.classes) {
+            // Get routine class teacherInitial from Firestore and normalize to uppercase
+            final classTeacherInitial = routineClass.teacherInitial.trim().toUpperCase();
+            
+            print('  Class: ${routineClass.courseName}');
+            print('    Class TeacherInitial (raw): "${routineClass.teacherInitial}"');
+            print('    Class TeacherInitial (uppercase): "$classTeacherInitial"');
+            print('    Comparing: "$classTeacherInitial" == "$teacherInitials" -> ${classTeacherInitial == teacherInitials}');
+            
+            // Compare Firestore teacherInitial fields (both uppercase)
+            if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+              print('    ✓ MATCH FOUND! Adding to day: "$fullDay"');
+              dayToClasses.putIfAbsent(fullDay, () => []).add(routineClass);
+            } else {
+              print('    ✗ No match');
+            }
           }
         }
         

@@ -83,10 +83,24 @@ class Routine {
       }
     }
 
+    // Extract day from document ID if day field is empty
+    // Document ID format: "batch_day" (e.g., "6_sat", "7_wednesday")
+    String dayFromId = '';
+    String dayFromField = map['day'] ?? '';
+    
+    if (dayFromField.isEmpty && id.contains('_')) {
+      final parts = id.split('_');
+      if (parts.length >= 2) {
+        dayFromId = parts.sublist(1).join('_').trim(); // Get everything after first underscore
+      }
+    }
+    
+    final finalDay = dayFromField.isNotEmpty ? dayFromField : dayFromId;
+
     return Routine(
       id: id,
       batch: map['batch'] ?? '',
-      day: map['day'] ?? '',
+      day: finalDay,
       teacherInitial: map['teacherInitial'] ?? '',
       classes: classes,
     );
