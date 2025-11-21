@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
-class AppLayout extends StatelessWidget {
+class AppLayout extends StatefulWidget {
   final bool showAppBar;
   final bool showBottomNavBar;
   final bool showFloatingActionButton;
@@ -22,14 +22,44 @@ class AppLayout extends StatelessWidget {
   });
 
   @override
+  State<AppLayout> createState() => _AppLayoutState();
+}
+
+class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<Offset> _floatingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1800),
+      vsync: this,
+    )..repeat();
+
+    _floatingAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, -0.08),
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      appBar: showAppBar
+      appBar: widget.showAppBar
           ? AppBar(
               backgroundColor: Colors.white,
               elevation: 1,
-              leading: leading ??
+              leading: widget.leading ??
                   IconButton(
                     icon: const Icon(Icons.home, color: Colors.teal),
                     onPressed: () {
@@ -37,19 +67,9 @@ class AppLayout extends StatelessWidget {
                           context, '/home', (route) => false);
                     },
                   ),
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildLogo(),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'ITM Connect',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              title: SlideTransition(
+                position: _floatingAnimation,
+                child: _buildLogo(),
               ),
               centerTitle: true,
               actions: [
@@ -63,16 +83,16 @@ class AppLayout extends StatelessWidget {
               ],
             )
           : null,
-      body: SafeArea(child: body),
-      bottomNavigationBar: showBottomNavBar
+      body: SafeArea(child: widget.body),
+      bottomNavigationBar: widget.showBottomNavBar
           ? SalomonBottomBar(
-              currentIndex: currentIndex == -1 ? 2 : currentIndex,
-              onTap: onBottomNavTap,
+              currentIndex: widget.currentIndex == -1 ? 2 : widget.currentIndex,
+              onTap: widget.onBottomNavTap,
               items: [
                 SalomonBottomBarItem(
                   icon: const Icon(Icons.person),
                   title: const Text(""),
-                  selectedColor: Colors.teal,
+                  selectedColor: const Color.fromARGB(255, 8, 19, 177),
                 ),
                 SalomonBottomBarItem(
                   icon: const Icon(Icons.notifications),

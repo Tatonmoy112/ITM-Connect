@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
@@ -38,67 +39,169 @@ class _ContactUsScreenState extends State<ContactUsScreen>
     required String subtitle,
     required Color color,
     required double width,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      width: width,
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border(
-          right: BorderSide(
-            color: color,
-            width: 4,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-        child: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Icon(icon, color: color, size: 28),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            const SizedBox(width: 18),
-            Expanded(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Colored Header
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(icon, color: Colors.white, size: 24),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: color,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
                     subtitle,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 13,
                       color: Colors.black87,
+                      fontWeight: FontWeight.w500,
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: color,
+                        size: 14,
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ============ URL LAUNCHER FUNCTIONS ============
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'itmoffice@daffodilvarsity.edu.bd',
+      queryParameters: {
+        'subject': 'Inquiry from ITM Connect',
+        'body': 'Hello, I would like to inquire about...',
+      },
+    );
+    
+    try {
+      await launchUrl(emailUri);
+    } catch (e) {
+      _showSnackbar('Error launching email: $e');
+    }
+  }
+
+  Future<void> _launchPhone() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: '01847140039');
+    
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        _showSnackbar('Phone call not available');
+      }
+    } catch (e) {
+      _showSnackbar('Error launching phone: $e');
+    }
+  }
+
+  Future<void> _launchWebsite() async {
+    final Uri websiteUri = Uri.parse('https://itm.daffodilvarsity.edu.bd');
+    
+    try {
+      await launchUrl(
+        websiteUri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      _showSnackbar('Error launching website: $e');
+    }
+  }
+
+  Future<void> _launchMaps() async {
+    final Uri mapsUri = Uri.parse(
+      'geo:23.8103,90.3436?q=Daffodil+Smart+City,+Birulia,+Savar,+Dhaka',
+    );
+    
+    try {
+      if (await canLaunchUrl(mapsUri)) {
+        await launchUrl(mapsUri);
+      } else {
+        _showSnackbar('Maps app not available');
+      }
+    } catch (e) {
+      _showSnackbar('Error launching maps: $e');
+    }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.teal,
       ),
     );
   }
@@ -132,6 +235,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                     subtitle: 'itmoffice@daffodilvarsity.edu.bd',
                     color: Colors.indigo,
                     width: cardWidth,
+                    onTap: _launchEmail,
                   ),
                   _buildProContactCard(
                     icon: Icons.phone_rounded,
@@ -139,6 +243,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                     subtitle: '01847-140039',
                     color: Colors.teal,
                     width: cardWidth,
+                    onTap: _launchPhone,
                   ),
                   _buildProContactCard(
                     icon: Icons.location_on_rounded,
@@ -146,6 +251,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                     subtitle: 'Daffodil Smart City (DSC), Birulia, Savar, Dhaka-1216',
                     color: Colors.deepOrange,
                     width: cardWidth,
+                    onTap: _launchMaps,
                   ),
                   _buildProContactCard(
                     icon: Icons.public_rounded,
@@ -153,6 +259,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                     subtitle: 'itm.daffodilvarsity.edu.bd',
                     color: Colors.blue,
                     width: cardWidth,
+                    onTap: _launchWebsite,
                   ),
                 ],
               ),

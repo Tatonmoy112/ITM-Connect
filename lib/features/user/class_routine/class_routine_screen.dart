@@ -1,13 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:collection/collection.dart'; // For mapIndexed
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
+import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/services/routine_service.dart';
+import 'package:itm_connect/services/pdf_download_service.dart';
 
 class ClassRoutineScreen extends StatefulWidget {
   const ClassRoutineScreen({super.key});
@@ -21,237 +21,198 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
   String? selectedDay;
 
   final List<String> days = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
+  final RoutineService _routineService = RoutineService();
 
   Future<void> _generateAndOpenFile() async {
-    if (selectedBatch == null) return;
+    if (selectedBatch == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a batch first')),
+      );
+      return;
+    }
 
-    final pdf = pw.Document();
-    final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-    final headers = ['Day', 'Course', 'Time Slot', 'Room', 'Teacher Initial'];
+    try {
+      // Show loading dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF43cea2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Generating PDF...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
-    final image = pw.MemoryImage(
-      (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
-    );
+      final pdf = pw.Document();
+      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        header: (context) => pw.Center(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Image(image, width: 100, height: 100),
-              pw.SizedBox(height: 10),
-              pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
-              pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
-              pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 20),
-              pw.Text('Class Routine for Batch $selectedBatch', style: boldStyle, textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 10),
+      final image = pw.MemoryImage(
+        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+      );
+
+      // Fetch all routine data from Firebase first
+      final Map<String, List<List<String>>> classesByDay = {};
+      for (final day in days) {
+        final routineId = '${selectedBatch}_$day';
+        final routine = await _routineService.getRoutine(routineId);
+
+        if (routine != null && routine.classes.isNotEmpty) {
+          classesByDay[day] = [];
+          for (final classItem in routine.classes) {
+            classesByDay[day]!.add([
+              '${classItem.courseName} (${classItem.courseCode})',
+              classItem.time,
+              classItem.room,
+              classItem.teacherInitial,
+            ]);
+          }
+        }
+      }
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          header: (context) => pw.Center(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Image(image, width: 100, height: 100),
+                pw.SizedBox(height: 10),
+                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
+                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
+                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
+                pw.SizedBox(height: 20),
+                pw.Text('Class Routine for Batch $selectedBatch', style: boldStyle, textAlign: pw.TextAlign.center),
+                pw.SizedBox(height: 10),
+              ],
+            ),
+          ),
+          build: (context) {
+            if (classesByDay.isEmpty) {
+              return [pw.Center(child: pw.Text('No routine available for this batch.'))];
+            }
+            
+            final widgets = <pw.Widget>[];
+            
+            // Create separate table for each day
+            for (final day in days) {
+              final dayClasses = classesByDay[day];
+              
+              if (dayClasses != null && dayClasses.isNotEmpty) {
+                widgets.add(
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(day, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
+                      pw.SizedBox(height: 5),
+                      pw.Table.fromTextArray(
+                        headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
+                        data: dayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerDecoration: const pw.BoxDecoration(
+                          color: PdfColors.teal700,
+                        ),
+                        cellAlignment: pw.Alignment.center,
+                        cellStyle: const pw.TextStyle(fontSize: 9),
+                        border: pw.TableBorder.all(),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(3),
+                          1: const pw.FlexColumnWidth(2.5),
+                          2: const pw.FlexColumnWidth(1.5),
+                          3: const pw.FlexColumnWidth(1.5),
+                        },
+                      ),
+                      pw.SizedBox(height: 15),
+                    ],
+                  ),
+                );
+              }
+            }
+            
+            return widgets;
+          },
+        ),
+      );
+
+      final fileName = 'Batch${selectedBatch}_Weekly_Routine.pdf';
+      
+      // Save PDF using cross-platform service
+      final pdfBytes = await pdf.save();
+      await PdfDownloadService.downloadPdf(
+        pdfBytes: pdfBytes.toList(),
+        fileName: fileName,
+      );
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('✓ PDF Downloaded Successfully'),
+            content: Text(
+              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Close'),
+              ),
             ],
           ),
-        ),
-        build: (context) {
-          final List<pw.Widget> dayTables = [];
-          for (final day in days) {
-            final routineKey = '${selectedBatch}_$day';
-            final routines = routineData[routineKey];
-
-            if (routines != null && routines.isNotEmpty) {
-              final List<List<String>> tableData = [];
-              for (final classItem in routines) {
-                tableData.add([
-                  day,
-                  '${classItem['courseName']} (${classItem['courseCode']})',
-                  classItem['time']!,
-                  classItem['room']!,
-                  classItem['teacher']!,
-                ]);
-              }
-              dayTables.add(
-                pw.Table.fromTextArray(
-                  headers: headers,
-                  data: tableData,
-                  headerStyle: boldStyle.copyWith(color: PdfColors.white),
-                  headerDecoration: const pw.BoxDecoration(
-                    color: PdfColors.teal700,
-                  ),
-                  cellAlignment: pw.Alignment.center,
-                  cellStyle: const pw.TextStyle(fontSize: 10),
-                  border: pw.TableBorder.all(),
-                  columnWidths: {
-                    0: const pw.FlexColumnWidth(1.5),
-                    1: const pw.FlexColumnWidth(3),
-                    2: const pw.FlexColumnWidth(2.5),
-                    3: const pw.FlexColumnWidth(1.5),
-                    4: const pw.FlexColumnWidth(1.5),
-                  },
-                ),
-              );
-              dayTables.add(pw.SizedBox(height: 20)); // Add space between tables
-            }
-          }
-
-          if (dayTables.isEmpty) {
-            return [pw.Center(child: pw.Text('No routine available for this batch.'))];
-          }
-
-          return dayTables;
-        },
-      ),
-    );
-
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/Batch${selectedBatch}_Weekly_Routine.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFilex.open(file.path);
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
-
-  // Updated routineData structure - BATCH REMOVED FROM HERE
-  final Map<String, List<Map<String, String>>> routineData = {
-    // Batch 6 routine
-    '6_Sat': [
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 418',
-        'courseCode': 'ITM418',
-        'teacher': 'MA',
-        'room': '609',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 314',
-        'courseCode': 'ITM314',
-        'teacher': 'FM',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-    '6_Mon': [
-      {
-        'time': '10:30 AM - 11:30 AM',
-        'courseName': 'ITM 401',
-        'courseCode': 'ITM401',
-        'teacher': 'NJ',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 313',
-        'courseCode': 'ITM313',
-        'teacher': 'FM',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-    '6_Tue': [
-      {
-        'time': '8:30 AM - 10:00 AM',
-        'courseName': 'ITM 418',
-        'courseCode': 'ITM418',
-        'teacher': 'MA',
-        'room': '603',
-      },
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 401',
-        'courseCode': 'ITM401',
-        'teacher': 'NJ',
-        'room': '602',
-      },
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 313',
-        'courseCode': 'ITM313',
-        'teacher': 'AHN',
-        'room': '602',
-      },
-    ],
-
-    // Batch 7 routine
-    '7_Sat': [
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 321',
-        'courseCode': 'ITM321',
-        'teacher': '',
-        'room': '609',
-      },
-      {
-        'time': '11:30 AM - 1:00 PM',
-        'courseName': 'ITM 321',
-        'courseCode': 'ITM321',
-        'teacher': '',
-        'room': '603',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': '',
-        'room': '602',
-      },
-    ],
-    '7_Sun': [
-      {
-        'time': '10:00 AM - 11:30 AM',
-        'courseName': 'ITM 306',
-        'courseCode': 'ITM306',
-        'teacher': '',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 323',
-        'courseCode': 'ITM323',
-        'teacher': '',
-        'room': '609',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 324',
-        'courseCode': 'ITM324',
-        'teacher': '',
-        'room': '609',
-      },
-    ],
-    '7_Mon': [
-      {
-        'time': '8:30 AM - 9:50 AM',
-        'courseName': 'ITM 306',
-        'courseCode': 'ITM306',
-        'teacher': '',
-        'room': '602',
-      },
-      {
-        'time': '1:00 PM - 2:30 PM',
-        'courseName': 'ITM 323',
-        'courseCode': 'ITM323',
-        'teacher': '',
-        'room': '603',
-      },
-      {
-        'time': '2:30 PM - 4:00 PM',
-        'courseName': 'ITM 304',
-        'courseCode': 'ITM304',
-        'teacher': '',
-        'room': '602',
-      },
-    ],
-  };
 
   @override
   void initState() {
@@ -266,10 +227,9 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final routineKey = selectedBatch != null && selectedDay != null
+    final routineId = selectedBatch != null && selectedDay != null
         ? '${selectedBatch}_$selectedDay'
         : null;
-    final routines = routineKey != null ? routineData[routineKey] : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -360,75 +320,89 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.black54),
               ).animate().fadeIn(),
 
-            if (selectedBatch != null &&
-                selectedDay != null &&
-                (routines == null || routines.isEmpty))
-              Animate(
-                effects: const [
-                  FadeEffect(duration: Duration(milliseconds: 400)),
-                  SlideEffect(begin: Offset(0, 0.1))
-                ],
-                child: Card(
-                  color: Colors.white, // Card color white
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Colors.white, // Ensure inner container is white
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.orange, size: 28),
-                            SizedBox(width: 10),
-                            Text(
-                              'No Classes Today',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Class Time: 8:30 AM – 4:00 PM',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Each class duration: 1 hour 30 minutes.',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            if (routineId != null)
+              StreamBuilder<Routine?>(
+                stream: _routineService.streamRoutine(routineId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
-            if (routines != null && routines.isNotEmpty)
-              ...routines.mapIndexed((index, routine) {
-                return Animate(
-                  effects: [
-                    FadeEffect(duration: 300.ms, delay: (index * 100).ms),
-                    SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
-                  ],
-                  child: RoutineClassCard(
-                    time: routine['time']!,
-                    courseName: routine['courseName']!,
-                    courseCode: routine['courseCode']!,
-                    teacher: routine['teacher']!,
-                    room: routine['room']!,
-                    // Removed batch: routine['batch']!
-                  ),
-                );
-              }).toList(),
+                  final routine = snapshot.data;
+
+                  if (routine == null || routine.classes.isEmpty) {
+                    return Animate(
+                      effects: const [
+                        FadeEffect(duration: Duration(milliseconds: 400)),
+                        SlideEffect(begin: Offset(0, 0.1))
+                      ],
+                      child: Card(
+                        color: Colors.white,
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: Colors.orange, size: 28),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'No Classes Today',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Class Time: 8:30 AM – 4:00 PM',
+                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Each class duration: 1 hour 30 minutes.',
+                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: routine.classes.mapIndexed((index, classItem) {
+                      return Animate(
+                        effects: [
+                          FadeEffect(duration: 300.ms, delay: (index * 100).ms),
+                          SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
+                        ],
+                        child: RoutineClassCard(
+                          time: classItem.time,
+                          courseName: classItem.courseName,
+                          courseCode: classItem.courseCode,
+                          teacherInitial: classItem.teacherInitial,
+                          room: classItem.room,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -441,7 +415,7 @@ class RoutineClassCard extends StatelessWidget {
   final String time;
   final String courseName;
   final String courseCode;
-  final String teacher;
+  final String teacherInitial;
   final String room;
 
   const RoutineClassCard({
@@ -449,89 +423,133 @@ class RoutineClassCard extends StatelessWidget {
     required this.time,
     required this.courseName,
     required this.courseCode,
-    required this.teacher,
+    required this.teacherInitial,
     required this.room,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.white,
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.95),
-              Colors.white.withOpacity(0.85),
-            ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Animate(
-          effects: [
-            FadeEffect(duration: 300.ms, delay: 50.ms),
-            SlideEffect(begin: Offset(0, 0.1), duration: 300.ms),
-          ],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Heading with course name and code
-              Row(
-                children: [
-                  const Icon(Icons.class_rounded, size: 22, color: Colors.deepPurple),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$courseName',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Teal Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.teal,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        courseName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Code: $courseCode',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    courseCode,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
-                    child: Text(
-                      courseCode,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.deepPurple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 16, color: Colors.teal),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        time,
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.schedule_rounded, size: 22, color: Colors.indigo),
-                  const SizedBox(width: 8),
-                  Text(time, style: const TextStyle(fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.person_rounded, size: 22, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(teacher.isNotEmpty ? teacher : '-', style: const TextStyle(fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.location_on_rounded, size: 22, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Text('Room: $room', style: const TextStyle(fontSize: 14)),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 16, color: Colors.teal),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Teacher: ${teacherInitial.isNotEmpty ? teacherInitial : '-'}',
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Room: $room',
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

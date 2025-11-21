@@ -1,37 +1,29 @@
-﻿# Initialize Git
-git init
+﻿# Flutter / Dart
+.dart_tool/
+.buildlog/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.sdk/
 
-# Create a fresh .gitignore (PowerShell-friendly)
-@"
+# Generated plugin registrants
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.m
+
+# Firebase (DO NOT COMMIT)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# IDE
+.vscode/
+.idea/
+
 # OS
 .DS_Store
 Thumbs.db
 
-# IDEs
-.vscode/
-.idea/
-
-# Node
-node_modules/
-dist/
-build/
-
-# Python
-__pycache__/
-*.py[cod]
-
-# Flutter / Dart
-**/build/
-.packages
-.pub-cache/
-
-# Temporary files
-*.log
-*.tmp
-"@ | Out-File -Encoding UTF8 .gitignore
-
-# Stage all files
-git add .
-
-# First commit
-git commit -m "Initial commit"
+# Others
+pubspec.lock

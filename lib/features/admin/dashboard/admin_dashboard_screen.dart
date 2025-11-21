@@ -50,45 +50,105 @@ class _WelcomeDashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
-      fontWeight: FontWeight.bold,
-      color: Colors.teal.shade700,
-    );
-    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Colors.grey[700],
-    );
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Card(
-        color: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Welcome to Admin Dashboard', style: titleStyle),
-              const SizedBox(height: 16),
-              Text(
-                'Manage all teachers, notices, routines, and feedback easily from here.',
-                style: textStyle,
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Teal Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
               ),
-              const SizedBox(height: 24),
-              _infoRow(Icons.person, 'Teachers',
-                  'Add, update, and delete teacher information.'),
-              const SizedBox(height: 16),
-              _infoRow(Icons.notifications, 'Notices',
-                  'Create and publish important notices.'),
-              const SizedBox(height: 16),
-              _infoRow(Icons.calendar_month, 'Routines',
-                  'Manage class schedules and routines.'),
-              const SizedBox(height: 16),
-              _infoRow(Icons.feedback, 'Feedback',
-                  'Review feedback from students and staff.'),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Admin Dashboard',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Manage all operations',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.dashboard,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Quick Actions',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _infoRow(Icons.person, 'Teachers',
+                      'Add, update, and delete teacher information.'),
+                  const SizedBox(height: 12),
+                  _infoRow(Icons.notifications, 'Notices',
+                      'Create and publish important notices.'),
+                  const SizedBox(height: 12),
+                  _infoRow(Icons.calendar_month, 'Routines',
+                      'Manage class schedules and routines.'),
+                  const SizedBox(height: 12),
+                  _infoRow(Icons.feedback, 'Feedback',
+                      'Review feedback from students and staff.'),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -97,18 +157,35 @@ class _WelcomeDashboardCard extends StatelessWidget {
   Widget _infoRow(IconData icon, String title, String subtitle) {
     return Row(
       children: [
-        Icon(icon, color: Colors.teal, size: 30),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.teal.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, color: Colors.teal, size: 20),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text(subtitle,
-                  style: const TextStyle(fontSize: 14, color: Colors.black54)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                ),
+              ),
             ],
           ),
         ),

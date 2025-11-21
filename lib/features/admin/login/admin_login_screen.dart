@@ -157,158 +157,230 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                 child: FadeTransition(
                   opacity: _fadeAnimation,
                   child: Container(
-                    padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
-                      ),
                     ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          buildAnimatedLogoIcon(),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Admin',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.teal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Teal Header
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.teal,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Secure Admin Access Panel',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'Admin Login',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Secure access panel',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ScaleTransition(
+                                scale: _scaleAnimation,
+                                child: CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  child: const Icon(
+                                    Icons.school,
+                                    size: 28,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Form Content
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Username',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _usernameController,
+                                  autofillHints: const [AutofillHints.username],
+                                  decoration: InputDecoration(
+                                    hintText: 'admin',
+                                    prefixIcon: const Icon(Icons.person),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter username';
+                                    }
+                                    if (!_isValidInput(value.trim())) {
+                                      return 'Only letters, numbers, _ allowed.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Password',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  enableSuggestions: false,
+                                  autocorrect: false,
+                                  autofillHints: const [AutofillHints.password],
+                                  decoration: InputDecoration(
+                                    hintText: '••••••••',
+                                    prefixIcon: const Icon(Icons.lock),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
+                                        color: Colors.grey,
+                                        size: 18,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter password';
+                                    }
+                                    if (!_isValidInput(value)) {
+                                      return 'Only letters, numbers, _ allowed.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.red.shade200),
+                                    ),
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 18),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 40,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _handleLogin,
+                                    icon: const Icon(Icons.login, size: 18),
+                                    label: const Text('Login'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.teal,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 30),
-                          const Align(
-                            alignment: Alignment.centerLeft,
+                        ),
+                        // Footer
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Colors.grey.shade200),
+                            ),
+                          ),
+                          child: Center(
                             child: Text(
-                              'Username',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: _usernameController,
-                            autofillHints: const [AutofillHints.username],
-                            decoration: InputDecoration(
-                              hintText: 'admin',
-                              prefixIcon: const Icon(Icons.person_outline),
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter username';
-                              }
-                              if (!_isValidInput(value.trim())) {
-                                return 'Only letters, numbers, _ allowed.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Password',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            enableSuggestions: false,
-                            autocorrect: false,
-                            autofillHints: const [AutofillHints.password],
-                            decoration: InputDecoration(
-                              hintText: '••••••••',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter password';
-                              }
-                              if (!_isValidInput(value)) {
-                                return 'Only letters, numbers, _ allowed.';
-                              }
-                              return null;
-                            },
-                          ),
-                          if (_errorMessage != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                  color: Colors.red, fontSize: 13),
-                            ),
-                          ],
-                          const SizedBox(height: 28),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _handleLogin,
-                              icon: const Icon(Icons.login),
-                              label: const Text('Login'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              '© 2025 ITM Connect. All rights reserved.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            '© 2025 ITM Connect. All rights reserved.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

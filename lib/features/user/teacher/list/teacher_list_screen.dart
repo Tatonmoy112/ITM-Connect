@@ -1,13 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:url_launcher/url_launcher.dart';
 import 'package:pdf/pdf.dart';
+import 'package:itm_connect/models/teacher.dart';
+import 'package:itm_connect/services/teacher_service.dart';
+import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/services/routine_service.dart';
+import 'package:itm_connect/services/pdf_download_service.dart';
 
 class TeacherListScreen extends StatefulWidget {
   const TeacherListScreen({super.key});
@@ -17,151 +17,50 @@ class TeacherListScreen extends StatefulWidget {
 }
 
 class _TeacherListScreenState extends State<TeacherListScreen> {
-  // Updated Data Structure
-  final List<Map<String, dynamic>> mockTeachers = [
-    {
-      "name": "Prof. Dr. Abdul Kalam",
-      "position": "Dean, Faculty of Engineering",
-      "email": "kalam@diu.edu.bd",
-      "image": "https://placehold.co/150x150/7B68EE/FFFFFF/png?text=AK",
-      "routine": {
-        "Monday": [
-          {"time": "09:00 AM - 10:30 AM", "courseName": "Leadership Seminar", "courseCode": "ENG-701", "room": "Dean's Office", "batch": "N/A"},
-        ],
-        "Wednesday": [
-          {"time": "02:00 PM - 03:30 PM", "courseName": "Research Methodology", "courseCode": "ENG-702", "room": "Auditorium", "batch": "N/A"},
-        ],
-      },
-    },
-    {
-      "name": "Dr. Aisha Khan",
-      "position": "Associate Dean, Faculty of Science",
-      "email": "aisha@diu.edu.bd",
-      "image": "https://placehold.co/150x150/6495ED/FFFFFF/png?text=AK",
-      "routine": {
-        "Tuesday": [
-          {"time": "11:00 AM - 12:30 PM", "courseName": "Advanced Physics", "courseCode": "PHY-501", "room": "Science Lab", "batch": "N/A"},
-        ],
-        "Thursday": [
-          {"time": "09:00 AM - 10:30 AM", "courseName": "Quantum Mechanics", "courseCode": "PHY-502", "room": "Lecture Hall 1", "batch": "N/A"},
-        ],
-      },
-    },
-    {
-      "name": "Dr. Rashed Ahmed",
-      "position": "Head of Department, CSE",
-      "email": "rashed@diu.edu.bd",
-      "image": "https://placehold.co/150x150/FF7F50/FFFFFF/png?text=RA",
-      "routine": {
-        "Monday": [
-          {"time": "10:00 AM - 11:30 AM", "courseName": "Data Structures", "courseCode": "CSE-221", "room": "303", "batch": "55th"},
-        ],
-        "Wednesday": [
-          {"time": "01:00 PM - 02:30 PM", "courseName": "Algorithms", "courseCode": "CSE-301", "room": "304", "batch": "54th"},
-        ],
-      },
-    },
-    {
-      "name": "Dr. Mahmudul Hasan",
-      "position": "Professor, CSE",
-      "email": "mahmudul@diu.edu.bd",
-      "image": "https://placehold.co/150x150/7B68EE/FFFFFF/png?text=MH",
-      "routine": {
-        "Monday": [
-          {"time": "09:00 AM - 10:30 AM", "courseName": "Advanced Algorithms", "courseCode": "CSE-321", "room": "501", "batch": "52nd"},
-          {"time": "01:00 PM - 02:30 PM", "courseName": "Compiler Design", "courseCode": "CSE-411", "room": "502", "batch": "49th"},
-        ],
-        "Tuesday": [
-          {"time": "11:00 AM - 12:30 PM", "courseName": "Data Structures", "courseCode": "CSE-221", "room": "303", "batch": "55th"},
-        ],
-      }
-    },
-    {
-      "name": "Ms. Farzana Rahman",
-      "position": "Lecturer, SWE",
-      "email": "farzana@diu.edu.bd",
-      "image": "https://placehold.co/150x150/6495ED/FFFFFF/png?text=FR",
-      "routine": {
-        "Monday": [
-          {"time": "10:00 AM - 11:30 AM", "courseName": "Intro to SWE", "courseCode": "SWE-101", "room": "601", "batch": "58th"},
-        ],
-        "Wednesday": [
-          {"time": "02:00 PM - 03:30 PM", "courseName": "Software Testing", "courseCode": "SWE-311", "room": "602", "batch": "54th"},
-        ]
-      }
-    },
-    {
-      "name": "Mr. John Doe",
-      "position": "Professor, Physics",
-      "email": "john@diu.edu.bd",
-      "image": "https://placehold.co/150x150/8A2BE2/FFFFFF/png?text=JD",
-      "routine": {
-        "Tuesday": [
-          {"time": "09:00 AM - 10:30 AM", "courseName": "Classical Mechanics", "courseCode": "PHY-301", "room": "Physics Lab", "batch": "N/A"},
-        ],
-        "Thursday": [
-          {"time": "01:00 PM - 02:30 PM", "courseName": "Thermodynamics", "courseCode": "PHY-302", "room": "Lecture Hall 2", "batch": "N/A"},
-        ],
-      },
-    },
-    {
-      "name": "Dr. Emily White",
-      "position": "Lecturer, Chemistry",
-      "email": "emily@diu.edu.bd",
-      "image": "https://placehold.co/150x150/008080/FFFFFF/png?text=EW",
-      "routine": {
-        "Wednesday": [
-          {"time": "11:00 AM - 12:30 PM", "courseName": "Organic Chemistry", "courseCode": "CHM-201", "room": "Chemistry Lab", "batch": "N/A"},
-        ],
-        "Friday": [
-          {"time": "09:00 AM - 10:30 AM", "courseName": "Inorganic Chemistry", "courseCode": "CHM-202", "room": "Lecture Hall 3", "batch": "N/A"},
-        ],
-      },
-    },
-  ];
+  final TeacherService _teacherService = TeacherService();
 
   // State
   int? _selectedIndex;
-  int? _showDailyRoutineIndex;
-  String _selectedDay = 'Monday';
+    int? _showDailyRoutineIndex;
+    String _selectedDay = DateTime.now().weekday == DateTime.sunday
+      ? 'Sunday'
+      : DateTime.now().weekday == DateTime.monday
+        ? 'Monday'
+        : DateTime.now().weekday == DateTime.tuesday
+          ? 'Tuesday'
+          : DateTime.now().weekday == DateTime.wednesday
+            ? 'Wednesday'
+            : DateTime.now().weekday == DateTime.thursday
+              ? 'Thursday'
+              : DateTime.now().weekday == DateTime.friday
+                ? 'Friday'
+                : 'Saturday';
+    final RoutineService _routineService = RoutineService();
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   String _getInitials(String name) {
-    List<String> nameParts = name.split(' ');
+    if (name.trim().isEmpty) return '';
+    final nameParts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (nameParts.isEmpty) return '';
+    // Take the first letter of EACH word (not just first and last)
     String initials = '';
-    if (nameParts.isNotEmpty) {
-      initials += nameParts[0][0];
-      if (nameParts.length > 1) {
-        initials += nameParts[nameParts.length - 1][0];
+    for (final part in nameParts) {
+      if (part.isNotEmpty) {
+        initials += part[0];
       }
     }
     return initials.toUpperCase();
   }
 
-  int _getTeacherRank(Map<String, dynamic> teacher) {
-    final name = teacher['name'] as String;
-    final position = teacher['position'] as String;
-
-    if (position.contains('Dean, Faculty')) return 1; // Dean
-    if (position.contains('Associate Dean')) return 2; // Associate Dean
-    if (position.contains('Head of Department')) return 3; // HOD
-    if (name.startsWith('Dr.') && position.contains('Professor')) return 4; // Professor with PhD
-    if (name.startsWith('Dr.') && position.contains('Lecturer')) return 5; // Lecturer with PhD
-    if (position.contains('Professor')) return 6; // Professor without PhD
-    if (position.contains('Lecturer')) return 7; // Lecturer without PhD
-    return 8; // Other
-  }
+  // Ranking helper removed; teacher ordering handled by Firestore or client-side sorting when needed.
 
   @override
   void initState() {
     super.initState();
-    mockTeachers.sort((a, b) => _getTeacherRank(a).compareTo(_getTeacherRank(b)));
-    final now = DateTime.now();
-    final formattedDay = DateFormat('EEEE').format(now);
-    const validDays = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-    _selectedDay = validDays.contains(formattedDay) ? formattedDay : 'Monday';
+    // No local mock data to sort — teachers are loaded from Firestore in real-time.
+    // Keep selected indices null by default.
   }
 
   @override
@@ -170,97 +69,248 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     super.dispose();
   }
 
-  // Updated PDF Generation Logic
-  Future<void> _generateAndOpenFile(Map<String, dynamic> teacher) async {
-    final pdf = pw.Document();
-    final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-    final teacherName = teacher['name'] as String;
-    final routine = teacher['routine'] as Map<String, List<Map<String, dynamic>>>;
+  // PDF generation and per-teacher routine export were removed because
+  // this screen now uses Firestore for teachers and routines are stored
+  // in the separate `routines` collection. PDF export can be added later.
 
-    final image = pw.MemoryImage(
-      (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
-    );
+  // Generate and save PDF for teacher's routine (current day format like class routine)
+  Future<void> _generateTeacherPDF(Teacher teacher) async {
+    try {
+      // Show loading dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF43cea2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Generating PDF...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        header: (context) => pw.Center(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Image(image, width: 100, height: 100),
-              pw.SizedBox(height: 10),
-              pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
-              pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
-              pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 20),
-              pw.Text('Class Routine for $teacherName', style: boldStyle, textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 5),
+      final pdf = pw.Document();
+      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+
+      final image = pw.MemoryImage(
+        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+      );
+
+      final routineService = RoutineService();
+      final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
+      
+      // Collect all classes for the full week
+      final List<List<String>> fullWeekTableData = [];
+      
+      final dayMap = {
+        'Sat': 'Saturday',
+        'Sun': 'Sunday',
+        'Mon': 'Monday',
+        'Tue': 'Tuesday',
+        'Wed': 'Wednesday',
+        'Thu': 'Thursday',
+        'Fri': 'Friday',
+      };
+      
+      final daysOrder = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+      // Fetch routines for each batch and day to find all classes for this teacher
+      final allRoutines = await routineService.streamAllRoutines().first;
+      final batchesSet = <String>{};
+      
+      for (final routine in allRoutines) {
+        if (routine.batch.isNotEmpty) {
+          batchesSet.add(routine.batch);
+        }
+      }
+
+      // Now fetch each batch's routine for each day
+      for (final day in daysOrder) {
+        for (final batch in batchesSet) {
+          final routineId = '${batch}_$day';
+          
+          final routine = await routineService.getRoutine(routineId);
+          
+          if (routine != null && routine.classes.isNotEmpty) {
+            for (final classItem in routine.classes) {
+              final classTeacherInitial = classItem.teacherInitial.trim().toUpperCase();
+              
+              if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+                fullWeekTableData.add([
+                  dayMap[day] ?? day,
+                  '${classItem.courseName} (${classItem.courseCode})',
+                  classItem.time,
+                  classItem.room,
+                  batch,
+                ]);
+              }
+            }
+          }
+        }
+      }
+      
+      if (fullWeekTableData.isEmpty) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No classes scheduled for this teacher.')),
+          );
+        }
+        return;
+      }
+
+      // Add page with teacher info and full week routine
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          header: (context) => pw.Center(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Image(image, width: 80, height: 80),
+                pw.SizedBox(height: 10),
+                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
+                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
+                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
+                pw.SizedBox(height: 15),
+                pw.Text('Teacher Routine Schedule', style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline)),
+                pw.SizedBox(height: 10),
+                pw.Text('Name: ${teacher.name}', style: boldStyle.copyWith(fontSize: 12)),
+                pw.Text('Email: ${teacher.email}', style: boldStyle.copyWith(fontSize: 11)),
+                pw.Text('Role: ${teacher.role}', style: boldStyle.copyWith(fontSize: 12)),
+                pw.SizedBox(height: 5),
+                pw.Text('Full Week Routine', style: boldStyle.copyWith(fontSize: 12)),
+                pw.SizedBox(height: 10),
+              ],
+            ),
+          ),
+          build: (context) {
+            final widgets = <pw.Widget>[];
+            
+            // Group classes by day
+            final Map<String, List<List<String>>> classesByDay = {};
+            for (final row in fullWeekTableData) {
+              final day = row[0];
+              if (!classesByDay.containsKey(day)) {
+                classesByDay[day] = [];
+              }
+              // Add row without day column (since we'll show it as header)
+              classesByDay[day]!.add([row[1], row[2], row[3], row[4]]);
+            }
+            
+            // Create separate table for each day
+            for (final day in daysOrder) {
+              final fullDay = dayMap[day] ?? day;
+              final dayClasses = classesByDay[fullDay];
+              
+              if (dayClasses != null && dayClasses.isNotEmpty) {
+                widgets.add(
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(fullDay, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
+                      pw.SizedBox(height: 5),
+                      pw.Table.fromTextArray(
+                        headers: ['Course', 'Time Slot', 'Room', 'Batch'],
+                        data: dayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerDecoration: const pw.BoxDecoration(
+                          color: PdfColors.teal700,
+                        ),
+                        cellAlignment: pw.Alignment.center,
+                        cellStyle: const pw.TextStyle(fontSize: 9),
+                        border: pw.TableBorder.all(),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(2.5),
+                          1: const pw.FlexColumnWidth(1.8),
+                          2: const pw.FlexColumnWidth(1.2),
+                          3: const pw.FlexColumnWidth(1),
+                        },
+                      ),
+                      pw.SizedBox(height: 15),
+                    ],
+                  ),
+                );
+              }
+            }
+            
+            return widgets;
+          },
+        ),
+      );
+
+      // Save PDF using cross-platform service
+      final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
+      final pdfBytes = await pdf.save();
+      await PdfDownloadService.downloadPdf(
+        pdfBytes: pdfBytes.toList(),
+        fileName: fileName,
+      );
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('✓ PDF Downloaded Successfully'),
+            content: Text(
+              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Close'),
+              ),
             ],
           ),
-        ),
-        build: (context) {
-          final List<pw.Widget> dayTables = [];
-          routine.forEach((day, classes) {
-            dayTables.add(pw.Header(level: 1, text: day, textStyle: boldStyle));
-            dayTables.add(pw.SizedBox(height: 10));
-
-            final List<List<String>> tableData = [];
-            for (final classItem in classes) {
-              tableData.add([
-                '${classItem['courseName']} (${classItem['courseCode']})',
-                classItem['time']!,
-                classItem['room']!,
-                classItem['batch']!,
-              ]);
-            }
-
-            dayTables.add(
-              pw.Table.fromTextArray(
-                headers: ['Course', 'Time Slot', 'Room', 'Batch'],
-                data: tableData,
-                headerStyle: boldStyle.copyWith(color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(
-                  color: PdfColors.teal700,
-                ),
-                cellAlignment: pw.Alignment.center,
-                cellStyle: const pw.TextStyle(fontSize: 10),
-                border: pw.TableBorder.all(),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(3),
-                  1: const pw.FlexColumnWidth(2.5),
-                  2: const pw.FlexColumnWidth(1.5),
-                  3: const pw.FlexColumnWidth(1.5),
-                },
-              ),
-            );
-            dayTables.add(pw.SizedBox(height: 20));
-          });
-
-          if (dayTables.isEmpty) {
-            return [pw.Center(child: pw.Text('No routine available for this teacher.'))];
-          }
-
-          return dayTables;
-        },
-      ),
-    );
-
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/$teacherName-routine.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFilex.open(file.path);
-  }
-
-  // Email Launcher
-  Future<void> _launchEmail(String emailAddress) async {
-    final Uri emailLaunchUri = Uri(scheme: 'mailto', path: emailAddress);
-    if (await canLaunchUrl(emailLaunchUri)) {
-      await launchUrl(emailLaunchUri);
-    } else {
+        );
+      }
+    } catch (e) {
       if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch email client for $emailAddress')),
+          SnackBar(
+            content: Text('Error generating PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
@@ -268,16 +318,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter teachers based on search query
-    final filteredTeachers = _searchQuery.isEmpty
-        ? mockTeachers
-        : mockTeachers.where((teacher) {
-            final name = (teacher['name'] as String).toLowerCase();
-            final position = (teacher['position'] as String).toLowerCase();
-            final query = _searchQuery.toLowerCase();
-            return name.contains(query) || position.contains(query);
-          }).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
@@ -291,7 +331,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search teacher by name or position...',
+                  hintText: 'Search teacher by name or role...',
                   prefixIcon: const Icon(Icons.search_rounded, color: Colors.teal),
                   filled: true,
                   fillColor: Colors.white,
@@ -306,147 +346,230 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   setState(() {
                     _searchQuery = value;
                     _selectedIndex = null;
-                    _showDailyRoutineIndex = null;
                   });
                 },
               ),
             ),
           ),
-          // Teacher List
+
+          // Teacher List (from Firestore)
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(0),
-              itemCount: filteredTeachers.length,
-              itemBuilder: (context, index) {
-                final teacher = filteredTeachers[index];
-                final isSelected = _selectedIndex == index;
-                final showDailyRoutine = _showDailyRoutineIndex == index;
+            child: StreamBuilder<List<Teacher>>(
+              stream: _teacherService.streamAllTeachers(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (isSelected) {
-                        _selectedIndex = null;
-                        _showDailyRoutineIndex = null;
-                      } else {
-                        _selectedIndex = index;
-                        _showDailyRoutineIndex = null;
-                      }
-                    });
-                  },
-                  child: Card(
-                    color: Colors.white,
-                    elevation: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOut,
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          // Collapsed View
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundColor: Colors.blueGrey,
-                                backgroundImage: (teacher['image'] != null && (teacher['image'] as String).isNotEmpty && !(teacher['image'] as String).contains('placehold.co'))
-                                    ? NetworkImage(teacher['image'] as String)
-                                    : null,
-                                child: (teacher['image'] == null || (teacher['image'] as String).isEmpty || (teacher['image'] as String).contains('placehold.co'))
-                                    ? Text(
-                                        _getInitials(teacher['name'] as String),
-                                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                                      )
-                                    : null,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(teacher['name'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 4),
-                                    Text(teacher['position'] as String, style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                                  ],
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final allTeachers = snapshot.data ?? [];
+                final filtered = _searchQuery.isEmpty
+                    ? allTeachers
+                    : allTeachers.where((t) {
+                        final q = _searchQuery.toLowerCase();
+                        return t.name.toLowerCase().contains(q) || t.role.toLowerCase().contains(q);
+                      }).toList();
+
+                if (filtered.isEmpty) {
+                  return const Center(child: Text('No teachers found.'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final teacher = filtered[index];
+                    final isSelected = _selectedIndex == index;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedIndex = null;
+                          } else {
+                            _selectedIndex = index;
+                          }
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Teal Header
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.teal,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
                                 ),
                               ),
-                              Icon(isSelected ? Icons.expand_less : Icons.expand_more),
-                            ],
-                          ),
-
-                          // Expanded View
-                          if (isSelected)
-                            Column(
-                              children: [
-                                const Divider(height: 24),
-                                // Email Section
-                                ListTile(
-                                  leading: const Icon(Icons.email_outlined, color: Colors.blueGrey),
-                                  title: Text(teacher['email'] as String),
-                                  onTap: () => _launchEmail(teacher['email'] as String),
-                                  dense: true,
-                                ),
-                                const Divider(),
-                                // Action Buttons
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          icon: Icon(showDailyRoutine ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                                          label: const Text('Daily Routine'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.teal,
-                                            foregroundColor: Colors.white,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          teacher.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          onPressed: () {
-                                            setState(() {
-                                              if (showDailyRoutine) {
-                                                _showDailyRoutineIndex = null;
-                                              } else {
-                                                _showDailyRoutineIndex = index;
-                                              }
-                                            });
-                                          },
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
-                                      const SizedBox(width: 8), // Add some spacing between buttons
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                                          label: const Text('Get Full PDF'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.deepOrange,
-                                            foregroundColor: Colors.white,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          teacher.role,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
                                           ),
-                                          onPressed: () {
-                                            _generateAndOpenFile(teacher);
-                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Teacher Avatar
+                                  CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: Colors.white.withOpacity(0.2),
+                                    backgroundImage: (() {
+                                      final url = teacher.imageUrl.trim();
+                                      if (url.isEmpty) return null;
+                                      final lower = url.toLowerCase();
+                                      try {
+                                        if (lower.startsWith('http://') || lower.startsWith('https://')) {
+                                          return NetworkImage(url);
+                                        }
+                                      } catch (_) {}
+                                      return null;
+                                    })(),
+                                    child: (teacher.imageUrl.trim().isEmpty)
+                                        ? Text(
+                                            _getInitials(teacher.name),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    isSelected ? Icons.expand_less : Icons.expand_more,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Content
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.email, size: 16, color: Colors.teal),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          teacher.email,
+                                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                // Daily Routine Display
-                                if (showDailyRoutine)
-                                  Column(
-                                    children: [
-                                      const SizedBox(height: 16),
+                                  // Expanded View
+                                  if (isSelected) ...[
+                                    const SizedBox(height: 16),
+                                    // Action Buttons
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            icon: const Icon(Icons.visibility_outlined, size: 16),
+                                            label: const Text('Daily Routine'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.teal,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                if (_showDailyRoutineIndex == index) {
+                                                  _showDailyRoutineIndex = null;
+                                                } else {
+                                                  _showDailyRoutineIndex = index;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                                            label: const Text('Get PDF'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.deepOrange,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              _generateTeacherPDF(teacher);
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    // Daily routine area (from Firestore)
+                                    if (_showDailyRoutineIndex == index) ...[
+                                      const SizedBox(height: 12),
                                       _buildDaySelector(),
-                                      const SizedBox(height: 16),
-                                      _buildRoutineList(teacher['name']),
+                                      const SizedBox(height: 12),
+                                      _buildTeacherRoutineWidget(teacher),
                                     ],
-                                  ).animate().fadeIn(),
-                              ],
-                            ).animate().fadeIn(delay: 100.ms),
-                        ],
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -460,25 +583,23 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     final days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     return SizedBox(
       height: 40,
-      child: ListView.builder(
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final day = days[index];
           final isSelected = _selectedDay == day;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ChoiceChip(
-              label: Text(day.substring(0, 3)),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() => _selectedDay = day);
-                }
-              },
-              backgroundColor: Colors.grey[200],
-              selectedColor: Colors.teal.withOpacity(0.8),
-              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+          return GestureDetector(
+            onTap: () => setState(() => _selectedDay = day),
+            child: AnimatedContainer(
+              duration: 250.ms,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.teal.shade500 : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(day.substring(0, 3), style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
             ),
           );
         },
@@ -486,116 +607,129 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     );
   }
 
-  Widget _buildRoutineList(String teacherName) {
-    final teacher = mockTeachers.firstWhere((t) => t['name'] == teacherName);
-    final routineForDay = (teacher['routine'] as Map<String, List<Map<String, String>>>)[_selectedDay] ?? [];
+  Widget _buildTeacherRoutineWidget(Teacher teacher) {
+    // Listen to all routines and filter client-side for the selected day and teacher initial (full day name)
+    return StreamBuilder<List<Routine>>(
+      stream: _routineService.streamAllRoutines(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text('Error loading routines: ${snapshot.error}'),
+          );
+        }
+        final routines = snapshot.data ?? [];
+        
+        // Get teacher's teacherInitial from Firestore (uppercase for comparison)
+        final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
 
-    if (routineForDay.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(child: Text('No classes scheduled for this day.')),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: routineForDay.length,
-      itemBuilder: (context, index) {
-        final classItem = routineForDay[index];
-        return _buildTimelineTile(
-          classItem: classItem,
-          isFirst: index == 0,
-          isLast: index == routineForDay.length - 1,
-        );
-      },
-    );
-  }
-
-  Widget _buildTimelineTile({required Map<String, String> classItem, required bool isFirst, required bool isLast}) {
-    return IntrinsicHeight(
-      child: Row(
-        children: [
-          Column(
-            children: [
-              if (!isFirst)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: Colors.teal,
+        // Debug info
+        print('=== TEACHER ROUTINE MATCHING ===');
+        print('Teacher ID: "${teacher.id}"');
+        print('Teacher Name: "${teacher.name}"');
+        print('Teacher TeacherInitial (raw): "${teacher.teacherInitial}"');
+        print('Teacher TeacherInitial (uppercase): "$teacherInitials"');
+        print('Is teacherInitial empty? ${teacherInitials.isEmpty}');
+        print('Total Routines: ${routines.length}');
+        
+        // Helper function to convert short day names to full names
+        String getFullDayName(String shortDay) {
+          final dayMap = {
+            'sat': 'Saturday',
+            'sun': 'Sunday',
+            'mon': 'Monday',
+            'tue': 'Tuesday',
+            'wed': 'Wednesday',
+            'thu': 'Thursday',
+            'fri': 'Friday',
+          };
+          final lower = shortDay.toLowerCase().trim();
+          return dayMap[lower] ?? shortDay; // Return full name or original if not found
+        }
+        
+        // Group all classes for this teacher by full day name
+        final Map<String, List<RoutineClass>> dayToClasses = {};
+        for (final r in routines) {
+          print('\nRoutine ID: "${r.id}" | Day="${r.day}" | Batch="${r.batch}" | Classes count: ${r.classes.length}');
+          
+          // If routine has no classes, skip it
+          if (r.classes.isEmpty) {
+            print('  Skipping routine with no classes');
+            continue;
+          }
+          
+          // Convert day to full name (e.g., "sat" → "Saturday")
+          final fullDay = getFullDayName(r.day);
+          print('  Day converted: "${r.day}" → "$fullDay"');
+          
+          // Check each class in the routine
+          for (final routineClass in r.classes) {
+            // Get routine class teacherInitial from Firestore and normalize to uppercase
+            final classTeacherInitial = routineClass.teacherInitial.trim().toUpperCase();
+            
+            print('  Class: ${routineClass.courseName}');
+            print('    Class TeacherInitial (raw): "${routineClass.teacherInitial}"');
+            print('    Class TeacherInitial (uppercase): "$classTeacherInitial"');
+            print('    Comparing: "$classTeacherInitial" == "$teacherInitials" -> ${classTeacherInitial == teacherInitials}');
+            
+            // Compare Firestore teacherInitial fields (both uppercase)
+            if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+              print('    ✓ MATCH FOUND! Adding to day: "$fullDay"');
+              dayToClasses.putIfAbsent(fullDay, () => []).add(routineClass);
+            } else {
+              print('    ✗ No match');
+            }
+          }
+        }
+        
+        if (dayToClasses.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: Text('No classes found for this teacher.')),
+          );
+        }
+        // Show classes for the selected day (full name)
+        final classesToday = dayToClasses[_selectedDay] ?? [];
+        if (classesToday.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: Text('No classes scheduled for this day.')),
+          );
+        }
+        return SizedBox(
+          height: 300,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: classesToday.map((c) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    leading: const Icon(Icons.class_rounded, color: Colors.deepPurple),
+                    title: Text('${c.courseName} (${c.courseCode})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 6),
+                        Row(children: [const Icon(Icons.schedule, size: 14, color: Colors.grey), const SizedBox(width: 6), Text(c.time)]),
+                        const SizedBox(height: 4),
+                        Row(children: [const Icon(Icons.location_on, size: 14, color: Colors.grey), const SizedBox(width: 6), Text('Room: ${c.room}')]),
+                      ],
+                    ),
                   ),
-                ),
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.teal,
-                ),
-                child: const Icon(Icons.class_, color: Colors.white, size: 16),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: Colors.teal,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      classItem['courseName']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      classItem['courseCode']!,
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                    ),
-                    const Divider(height: 16),
-                    Row(
-                      children: [
-                        const Icon(Icons.schedule, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(classItem['time']!),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text('Room: ${classItem['room']!}'),
-                      ],
-                    ),
-                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.group, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text('Batch: ${classItem['batch']!}'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+                );
+              }).toList(),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

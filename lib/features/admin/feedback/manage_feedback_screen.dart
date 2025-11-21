@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:itm_connect/models/feedback_entry.dart';
+import 'package:itm_connect/services/feedback_service.dart';
 
 class ManageFeedbackScreen extends StatefulWidget {
   const ManageFeedbackScreen({super.key});
@@ -9,21 +11,7 @@ class ManageFeedbackScreen extends StatefulWidget {
 
 class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     with SingleTickerProviderStateMixin {
-  // ✅ Mock data — replace with Firestore in future
-  final List<Map<String, String>> feedbacks = [
-    {
-      'name': 'John Doe',
-      'email': 'john@diu.edu.bd',
-      'message': 'The app is really helpful. Great job!',
-      'timestamp': '2025-07-08 10:30 AM',
-    },
-    {
-      'name': 'Sarah Ahmed',
-      'email': 'sarah@diu.edu.bd',
-      'message': 'Would love to see dark mode support.',
-      'timestamp': '2025-07-08 11:00 AM',
-    },
-  ];
+  final FeedbackService _feedbackService = FeedbackService();
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
@@ -42,7 +30,7 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     );
   }
 
-  void _deleteFeedback(int index) {
+  void _deleteFeedbackById(String docId) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -52,11 +40,18 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                feedbacks.removeAt(index);
-              });
+            onPressed: () async {
               Navigator.pop(context);
+              try {
+                await _feedbackService.deleteFeedback(docId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback deleted')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -65,38 +60,128 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
     );
   }
 
-  Widget _buildFeedbackCard(Map<String, String> data, int index) {
+  Widget _buildFeedbackCard(FeedbackEntry data, int index) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          data['name'] ?? '',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(data['email'] ?? '', style: const TextStyle(fontSize: 13, color: Colors.black87)),
-            const SizedBox(height: 8),
-            Text(data['message'] ?? '', style: const TextStyle(fontSize: 15)),
-            const SizedBox(height: 8),
-            Text('🕒 ${data['timestamp'] ?? ''}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () => _deleteFeedback(index),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Teal Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.teal,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data.feedbackType.isNotEmpty ? data.feedbackType : 'Feedback',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(
+                    Icons.feedback,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.email, size: 16, color: Colors.teal),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        data.email,
+                        style: const TextStyle(fontSize: 12, color: Colors.black87),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  data.message,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '📅 ${data.date} 🕒 ${data.time}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _deleteFeedbackById(data.id),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -117,12 +202,23 @@ class _ManageFeedbackScreenState extends State<ManageFeedbackScreen>
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: feedbacks.isEmpty
-                  ? const Center(child: Text('No feedback available.'))
-                  : ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: feedbacks.length,
-                itemBuilder: (_, index) => _buildFeedbackCard(feedbacks[index], index),
+              child: StreamBuilder<List<FeedbackEntry>>(
+                stream: _feedbackService.streamAllFeedbacks(),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snap.hasError) {
+                    return Center(child: Text('Error: ${snap.error}'));
+                  }
+                  final list = snap.data ?? [];
+                  if (list.isEmpty) return const Center(child: Text('No feedback available.'));
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: list.length,
+                    itemBuilder: (_, index) => _buildFeedbackCard(list[index], index),
+                  );
+                },
               ),
             ),
           ),
