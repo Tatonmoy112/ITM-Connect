@@ -7,31 +7,6 @@ import 'package:itm_connect/features/user/contact/contact_us_screen.dart';
 import 'package:itm_connect/features/user/feedback/feedback_screen.dart';
 import 'package:itm_connect/features/user/notice/notice_board_screen.dart';
 import 'package:itm_connect/features/user/teacher/list/teacher_list_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-// ============ URL LAUNCHER HELPERS AND CONSTANTS ============
-
-final Map<String, Uri> _kSocialLinks = {
-  'whatsapp': Uri.parse('https://wa.me/1234567890'),
-  'facebook': Uri.parse('https://www.facebook.com/yourpage'),
-  'instagram': Uri.parse('https://www.instagram.com/yourprofile'),
-  'youtube': Uri.parse('https://www.youtube.com/channel/yourchannel'),
-};
-
-Future<void> _launchUrlFrom(BuildContext context, Uri uri) async {
-  try {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the link')),
-      );
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error opening link: $e')),
-    );
-  }
-}
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});

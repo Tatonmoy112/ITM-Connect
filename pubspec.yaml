@@ -39,6 +39,8 @@ dependencies:
   animated_text_kit: ^4.2.3
   firebase_core: ^4.2.1
   cloud_firestore: ^6.1.0
+  webview_flutter: 4.7.0
+  universal_html: ^2.2.4
 
   # ✅ (Future) Firebase Integration – Uncomment when ready
   # firebase_core: ^2.27.0
@@ -48,6 +50,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true

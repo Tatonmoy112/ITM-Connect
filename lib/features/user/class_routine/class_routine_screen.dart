@@ -1,15 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:collection/collection.dart'; // For mapIndexed
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
+import 'package:itm_connect/services/pdf_download_service.dart';
 
 class ClassRoutineScreen extends StatefulWidget {
   const ClassRoutineScreen({super.key});
@@ -26,103 +24,193 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
   final RoutineService _routineService = RoutineService();
 
   Future<void> _generateAndOpenFile() async {
-    if (selectedBatch == null) return;
-
-    final pdf = pw.Document();
-    final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-
-    final image = pw.MemoryImage(
-      (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
-    );
-
-    // Fetch all routine data from Firebase first
-    final Map<String, List<List<String>>> classesByDay = {};
-    for (final day in days) {
-      final routineId = '${selectedBatch}_$day';
-      final routine = await _routineService.getRoutine(routineId);
-
-      if (routine != null && routine.classes.isNotEmpty) {
-        classesByDay[day] = [];
-        for (final classItem in routine.classes) {
-          classesByDay[day]!.add([
-            '${classItem.courseName} (${classItem.courseCode})',
-            classItem.time,
-            classItem.room,
-            classItem.teacherInitial,
-          ]);
-        }
-      }
+    if (selectedBatch == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a batch first')),
+      );
+      return;
     }
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        header: (context) => pw.Center(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Image(image, width: 100, height: 100),
-              pw.SizedBox(height: 10),
-              pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
-              pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
-              pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 20),
-              pw.Text('Class Routine for Batch $selectedBatch', style: boldStyle, textAlign: pw.TextAlign.center),
-              pw.SizedBox(height: 10),
+    try {
+      // Show loading dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF43cea2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Generating PDF...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final pdf = pw.Document();
+      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+
+      final image = pw.MemoryImage(
+        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+      );
+
+      // Fetch all routine data from Firebase first
+      final Map<String, List<List<String>>> classesByDay = {};
+      for (final day in days) {
+        final routineId = '${selectedBatch}_$day';
+        final routine = await _routineService.getRoutine(routineId);
+
+        if (routine != null && routine.classes.isNotEmpty) {
+          classesByDay[day] = [];
+          for (final classItem in routine.classes) {
+            classesByDay[day]!.add([
+              '${classItem.courseName} (${classItem.courseCode})',
+              classItem.time,
+              classItem.room,
+              classItem.teacherInitial,
+            ]);
+          }
+        }
+      }
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          header: (context) => pw.Center(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Image(image, width: 100, height: 100),
+                pw.SizedBox(height: 10),
+                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
+                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
+                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
+                pw.SizedBox(height: 20),
+                pw.Text('Class Routine for Batch $selectedBatch', style: boldStyle, textAlign: pw.TextAlign.center),
+                pw.SizedBox(height: 10),
+              ],
+            ),
+          ),
+          build: (context) {
+            if (classesByDay.isEmpty) {
+              return [pw.Center(child: pw.Text('No routine available for this batch.'))];
+            }
+            
+            final widgets = <pw.Widget>[];
+            
+            // Create separate table for each day
+            for (final day in days) {
+              final dayClasses = classesByDay[day];
+              
+              if (dayClasses != null && dayClasses.isNotEmpty) {
+                widgets.add(
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(day, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
+                      pw.SizedBox(height: 5),
+                      pw.Table.fromTextArray(
+                        headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
+                        data: dayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerDecoration: const pw.BoxDecoration(
+                          color: PdfColors.teal700,
+                        ),
+                        cellAlignment: pw.Alignment.center,
+                        cellStyle: const pw.TextStyle(fontSize: 9),
+                        border: pw.TableBorder.all(),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(3),
+                          1: const pw.FlexColumnWidth(2.5),
+                          2: const pw.FlexColumnWidth(1.5),
+                          3: const pw.FlexColumnWidth(1.5),
+                        },
+                      ),
+                      pw.SizedBox(height: 15),
+                    ],
+                  ),
+                );
+              }
+            }
+            
+            return widgets;
+          },
+        ),
+      );
+
+      final fileName = 'Batch${selectedBatch}_Weekly_Routine.pdf';
+      
+      // Save PDF using cross-platform service
+      final pdfBytes = await pdf.save();
+      await PdfDownloadService.downloadPdf(
+        pdfBytes: pdfBytes.toList(),
+        fileName: fileName,
+      );
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('✓ PDF Downloaded Successfully'),
+            content: Text(
+              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Close'),
+              ),
             ],
           ),
-        ),
-        build: (context) {
-          if (classesByDay.isEmpty) {
-            return [pw.Center(child: pw.Text('No routine available for this batch.'))];
-          }
-          
-          final widgets = <pw.Widget>[];
-          
-          // Create separate table for each day
-          for (final day in days) {
-            final dayClasses = classesByDay[day];
-            
-            if (dayClasses != null && dayClasses.isNotEmpty) {
-              widgets.add(
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(day, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
-                    pw.SizedBox(height: 5),
-                    pw.Table.fromTextArray(
-                      headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
-                      data: dayClasses,
-                      headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
-                      headerDecoration: const pw.BoxDecoration(
-                        color: PdfColors.teal700,
-                      ),
-                      cellAlignment: pw.Alignment.center,
-                      cellStyle: const pw.TextStyle(fontSize: 9),
-                      border: pw.TableBorder.all(),
-                      columnWidths: {
-                        0: const pw.FlexColumnWidth(3),
-                        1: const pw.FlexColumnWidth(2.5),
-                        2: const pw.FlexColumnWidth(1.5),
-                        3: const pw.FlexColumnWidth(1.5),
-                      },
-                    ),
-                    pw.SizedBox(height: 15),
-                  ],
-                ),
-              );
-            }
-          }
-          
-          return widgets;
-        },
-      ),
-    );
-
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/Batch${selectedBatch}_Weekly_Routine.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFilex.open(file.path);
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
 

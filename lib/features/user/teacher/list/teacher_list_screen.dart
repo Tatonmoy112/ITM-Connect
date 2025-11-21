@@ -1,15 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
 import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
+import 'package:itm_connect/services/pdf_download_service.dart';
 
 class TeacherListScreen extends StatefulWidget {
   const TeacherListScreen({super.key});
@@ -78,6 +76,46 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   // Generate and save PDF for teacher's routine (current day format like class routine)
   Future<void> _generateTeacherPDF(Teacher teacher) async {
     try {
+      // Show loading dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF43cea2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Generating PDF...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       final pdf = pw.Document();
       final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
 
@@ -104,7 +142,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       final daysOrder = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
       // Fetch routines for each batch and day to find all classes for this teacher
-      // First, get all batches from Firestore by fetching routines
       final allRoutines = await routineService.streamAllRoutines().first;
       final batchesSet = <String>{};
       
@@ -113,24 +150,17 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           batchesSet.add(routine.batch);
         }
       }
-      
-      print('DEBUG: Teacher searching - Name: ${teacher.name}, Initials: $teacherInitials');
-      print('DEBUG: Found batches: $batchesSet');
 
       // Now fetch each batch's routine for each day
       for (final day in daysOrder) {
         for (final batch in batchesSet) {
           final routineId = '${batch}_$day';
-          print('DEBUG: Fetching routine: $routineId');
           
           final routine = await routineService.getRoutine(routineId);
           
           if (routine != null && routine.classes.isNotEmpty) {
-            print('DEBUG: Found routine $routineId with ${routine.classes.length} classes');
-            
             for (final classItem in routine.classes) {
               final classTeacherInitial = classItem.teacherInitial.trim().toUpperCase();
-              print('DEBUG: Checking class ${classItem.courseName}, teacher: $classTeacherInitial vs $teacherInitials');
               
               if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
                 fullWeekTableData.add([
@@ -140,20 +170,16 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   classItem.room,
                   batch,
                 ]);
-                print('DEBUG: ✓ Added class: ${classItem.courseName} on $day');
               }
             }
           }
         }
       }
       
-      print('DEBUG: Total classes collected: ${fullWeekTableData.length}');
-      for (final row in fullWeekTableData) {
-        print('  - $row');
-      }
-      
       if (fullWeekTableData.isEmpty) {
         if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No classes scheduled for this teacher.')),
           );
@@ -241,18 +267,49 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         ),
       );
 
-      // Save PDF to device
-      final output = await getTemporaryDirectory();
+      // Save PDF using cross-platform service
       final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
-      final file = File('${output.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      await OpenFilex.open(file.path);
+      final pdfBytes = await pdf.save();
+      await PdfDownloadService.downloadPdf(
+        pdfBytes: pdfBytes.toList(),
+        fileName: fileName,
+      );
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('✓ PDF Downloaded Successfully'),
+            content: Text(
+              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
-            duration: const Duration(seconds: 2),
+            content: Text('Error generating PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
