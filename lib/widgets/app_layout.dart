@@ -85,50 +85,110 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
           : null,
       body: SafeArea(child: widget.body),
       bottomNavigationBar: widget.showBottomNavBar
-          ? SalomonBottomBar(
-              currentIndex: widget.currentIndex == -1 ? 2 : widget.currentIndex,
-              onTap: widget.onBottomNavTap,
-              items: [
-                SalomonBottomBarItem(
-                  icon: const Icon(Icons.person),
-                  title: const Text(""),
-                  selectedColor: const Color.fromARGB(255, 8, 19, 177),
-                ),
-                SalomonBottomBarItem(
-                  icon: const Icon(Icons.notifications),
-                  title: const Text(""),
-                  selectedColor: Colors.orange,
-                ),
-                SalomonBottomBarItem(
-                  icon: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.teal.withOpacity(0.18),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    child: const Icon(Icons.calendar_month_rounded, color: Colors.teal, size: 32),
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmallScreen = constraints.maxWidth < 360;
+                final isMediumScreen = constraints.maxWidth >= 360 && constraints.maxWidth < 600;
+                
+                late EdgeInsets itemPadding;
+                late double iconSize;
+                late double fontSize;
+                late double navBarHeight;
+                
+                if (isSmallScreen) {
+                  itemPadding = const EdgeInsets.symmetric(vertical: 8, horizontal: 8);
+                  iconSize = 22.0;
+                  fontSize = 9.0;
+                  navBarHeight = 70;
+                } else if (isMediumScreen) {
+                  itemPadding = const EdgeInsets.symmetric(vertical: 12, horizontal: 12);
+                  iconSize = 26.0;
+                  fontSize = 11.0;
+                  navBarHeight = 75;
+                } else {
+                  itemPadding = const EdgeInsets.symmetric(vertical: 16, horizontal: 20);
+                  iconSize = 28.0;
+                  fontSize = 12.0;
+                  navBarHeight = 85;
+                }
+                
+                return Container(
+                  height: navBarHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
-                  title: const Text(""),
-                  selectedColor: Colors.teal,
-                ),
-                SalomonBottomBarItem(
-                  icon: const Icon(Icons.contact_mail),
-                  title: const Text(""),
-                  selectedColor: Colors.green,
-                ),
-                SalomonBottomBarItem(
-                  icon: const Icon(Icons.feedback),
-                  title: const Text(""),
-                  selectedColor: Colors.deepPurple,
-                ),
-              ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: SalomonBottomBar(
+                        currentIndex: widget.currentIndex == -1 ? 2 : widget.currentIndex,
+                        onTap: widget.onBottomNavTap,
+                        itemPadding: itemPadding,
+                        backgroundColor: Colors.white,
+                        items: [
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.person_rounded, size: iconSize),
+                            title: Text("Faculty", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.notifications_rounded, size: iconSize),
+                            title: Text("Notices", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF43cea2),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF185a9d), Color(0xFF43cea2)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF43cea2).withOpacity(0.25),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                              child: Icon(Icons.calendar_month_rounded, color: Colors.white, size: isSmallScreen ? 24.0 : 28.0),
+                            ),
+                            title: Text("Routine", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.contact_mail_rounded, size: iconSize),
+                            title: Text("Contact", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF43cea2),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.feedback_rounded, size: iconSize),
+                            title: Text("Feedback", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             )
           : null,
     );

@@ -227,6 +227,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    final isTablet = size.width >= 600 && size.width < 1024;
+    
+    final horizontalPadding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
+    final containerMaxWidth = isMobile ? double.infinity : (isTablet ? 600.0 : 700.0);
+    final headerFontSize = isMobile ? 16.0 : (isTablet ? 18.0 : 22.0);
+    final subtitleFontSize = isMobile ? 11.0 : (isTablet ? 12.0 : 13.0);
+    final headerPadding = isMobile ? 8.0 : (isTablet ? 10.0 : 12.0);
+    
     final routineId = selectedBatch != null && selectedDay != null
         ? '${selectedBatch}_$selectedDay'
         : null;
@@ -243,313 +253,397 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
             ).animate().scale()
           : null,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Batch Input
-            Card(
-              color: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Enter Batch Number',
-                    prefixIcon: Icon(Icons.group),
-                  ),
-                  onChanged: (value) {
-                    final batch = int.tryParse(value);
-                    if (batch != null && batch > 0) {
-                      setState(() => selectedBatch = batch);
-                    }
-                  },
-                ),
-              ),
-            ).animate().fadeIn(duration: 400.ms),
-
-            const SizedBox(height: 20),
-
-            // Day Selector
-            Card(
-              color: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Container(
-                height: 42,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: days.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final day = days[index];
-                    final isSelected = selectedDay == day;
-                    return GestureDetector(
-                      onTap: () => setState(() => selectedDay = day),
-                      child: AnimatedContainer(
-                        duration: 300.ms,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.teal.shade500 : Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
+            // Header Card with Batch Input and Day Selector
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: horizontalPadding),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.teal.withOpacity(0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                        spreadRadius: 2,
                       ),
-                    );
-                  },
-                ),
-              ),
-            ).animate().slideX(begin: 1).fadeIn(duration: 400.ms),
-
-            const SizedBox(height: 24),
-
-            if (selectedBatch == null || selectedDay == null)
-              const Text(
-                'Please enter batch and select day.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ).animate().fadeIn(),
-
-            if (routineId != null)
-              StreamBuilder<Routine?>(
-                stream: _routineService.streamRoutine(routineId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  final routine = snapshot.data;
-
-                  if (routine == null || routine.classes.isEmpty) {
-                    return Animate(
-                      effects: const [
-                        FadeEffect(duration: Duration(milliseconds: 400)),
-                        SlideEffect(begin: Offset(0, 0.1))
-                      ],
-                      child: Card(
-                        color: Colors.white,
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: Colors.white,
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Teal Header
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(headerPadding),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.teal, Colors.teal.shade700],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(6),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.orange, size: 28),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'No Classes Today',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 12),
+                            children: [
                               Text(
-                                'Class Time: 8:30 AM – 4:00 PM',
-                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                                'Class Routine',
+                                style: TextStyle(
+                                  fontSize: headerFontSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Text(
-                                'Each class duration: 1 hour 30 minutes.',
-                                style: TextStyle(fontSize: 14, color: Colors.black87),
+                                'Select batch and day to view schedule',
+                                style: TextStyle(
+                                  fontSize: subtitleFontSize,
+                                  color: Colors.white.withOpacity(0.9),
+                                  letterSpacing: 0.3,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  }
+                      // Body Content
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            // Batch Input
+                            Card(
+                              color: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                child: TextField(
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: 'Enter Batch Number',
+                                    prefixIcon: Icon(Icons.group),
+                                  ),
+                                  onChanged: (value) {
+                                    final batch = int.tryParse(value);
+                                    if (batch != null && batch > 0) {
+                                      setState(() => selectedBatch = batch);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ).animate().fadeIn(duration: 400.ms),
 
-                  return Column(
-                    children: routine.classes.mapIndexed((index, classItem) {
-                      return Animate(
-                        effects: [
-                          FadeEffect(duration: 300.ms, delay: (index * 100).ms),
-                          SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
-                        ],
-                        child: RoutineClassCard(
-                          time: classItem.time,
-                          courseName: classItem.courseName,
-                          courseCode: classItem.courseCode,
-                          teacherInitial: classItem.teacherInitial,
-                          room: classItem.room,
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                            const SizedBox(height: 12),
 
-// Renamed GlassCard to RoutineClassCard
-class RoutineClassCard extends StatelessWidget {
-  final String time;
-  final String courseName;
-  final String courseCode;
-  final String teacherInitial;
-  final String room;
-
-  const RoutineClassCard({
-    super.key,
-    required this.time,
-    required this.courseName,
-    required this.courseCode,
-    required this.teacherInitial,
-    required this.room,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Teal Header
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.teal,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        courseName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Code: $courseCode',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                            // Day Selector
+                            Card(
+                              color: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Container(
+                                height: 42,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: days.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                  itemBuilder: (context, index) {
+                                    final day = days[index];
+                                    final isSelected = selectedDay == day;
+                                    return GestureDetector(
+                                      onTap: () => setState(() => selectedDay = day),
+                                      child: AnimatedContainer(
+                                        duration: 300.ms,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? Colors.teal.shade500 : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          day,
+                                          style: TextStyle(
+                                            color: isSelected ? Colors.white : Colors.black87,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ).animate().slideX(begin: 1).fadeIn(duration: 400.ms),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              ),
+            ),
+
+            // Routine Content Card
+            if (selectedBatch == null || selectedDay == null)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    courseCode,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Text(
+                        'Please enter batch and select day.',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ).animate().fadeIn(),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.schedule, size: 16, color: Colors.teal),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        time,
-                        style: const TextStyle(fontSize: 13, color: Colors.black87),
-                      ),
-                    ),
-                  ],
+              ),
+
+            if (routineId != null)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                  child: StreamBuilder<Routine?>(
+                    stream: _routineService.streamRoutine(routineId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        );
+                      }
+
+                      final routine = snapshot.data;
+
+                      if (routine == null || routine.classes.isEmpty) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Row(
+                                  children: [
+                                    Icon(Icons.info_outline, color: Colors.orange, size: 28),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'No Classes Today',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Class Time: 8:30 AM – 4:00 PM',
+                                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Each class duration: 1 hour 30 minutes.',
+                                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: routine.classes.mapIndexed((index, classItem) {
+                          return Animate(
+                            effects: [
+                              FadeEffect(duration: 300.ms, delay: (index * 100).ms),
+                              SlideEffect(begin: const Offset(0, 0.2), duration: 300.ms),
+                            ],
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Teal Header
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(12),
+                                        topRight: Radius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                classItem.courseName,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Code: ${classItem.courseCode}',
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            classItem.courseCode,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Content
+                                  Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.schedule, size: 16, color: Colors.teal),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                classItem.time,
+                                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.person, size: 16, color: Colors.teal),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Teacher: ${classItem.teacherInitial.isNotEmpty ? classItem.teacherInitial : '-'}',
+                                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Room: ${classItem.room}',
+                                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.person, size: 16, color: Colors.teal),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Teacher: ${teacherInitial.isNotEmpty ? teacherInitial : '-'}',
-                        style: const TextStyle(fontSize: 13, color: Colors.black87),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.teal),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Room: $room',
-                        style: const TextStyle(fontSize: 13, color: Colors.black87),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

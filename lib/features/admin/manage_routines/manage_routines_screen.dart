@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
 
@@ -47,12 +48,12 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
     )..forward();
 
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: Curves.easeIn,
+      curve: Curves.easeInOut,
     );
   }
 
@@ -446,38 +447,110 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: StreamBuilder<List<String>>(
-              stream: _routineService.streamAllBatches(),
-              builder: (context, snap) {
-                final batchList = snap.data ?? [];
-
-                // If no selectedBatch yet but firestore has batches, pick first once
-                if (batchList.isNotEmpty && (selectedBatch.isEmpty || !batchList.contains(selectedBatch))) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    setState(() {
-                      selectedBatch = batchList.first;
-                      batches = List<String>.from(batchList);
-                    });
-                  });
-                } else if (batchList.isNotEmpty) {
-                  // ensure local batches list follows firestore list
-                  batches = List<String>.from(batchList);
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Welcome Card with Dropdowns
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
                   children: [
-                    // Dropdown Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    // Teal Header Section
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.teal, Colors.teal.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Icon Badge
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.schedule,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Text Content
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Routines Hub',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Create and manage class routines for all batches',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.9),
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Dropdowns Section
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Day Selection
+                          const Text(
+                            'Select Day',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
@@ -487,54 +560,71 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                               isExpanded: true,
                               underline: const SizedBox(),
                               value: selectedDay,
-                              onChanged: (val) => setState(() => selectedDay = val!),
+                              onChanged: (val) {
+                                if (val == null) return;
+                                setState(() => selectedDay = val);
+                              },
                               items: days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: DropdownButton<String>(
-                              isExpanded: true,
-                              underline: const SizedBox(),
-                              value: batchList.contains(selectedBatch) ? selectedBatch : null,
-                              hint: const Text('Select batch'),
-                              onChanged: (val) {
-                                if (val == null) return;
-                                setState(() => selectedBatch = val);
-                              },
-                              items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                          const SizedBox(height: 16),
+                          // Batch Selection
+                          const Text(
+                            'Select Batch',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          StreamBuilder<List<String>>(
+                            stream: _routineService.streamAllBatches(),
+                            builder: (context, snapshot) {
+                              final batchList = snapshot.data ?? [];
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  underline: const SizedBox(),
+                                  value: batchList.contains(selectedBatch) ? selectedBatch : null,
+                                  hint: const Text('Select batch'),
+                                  onChanged: (val) {
+                                    if (val == null) return;
+                                    setState(() => selectedBatch = val);
+                                  },
+                                  items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                );
-              },
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Manage Batches',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
                 ),
+              ),
+            ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
+            // Batch Management and Routines List
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Manage Batches',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 // Create Batch Section
                 Row(
@@ -662,7 +752,8 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
           const SizedBox(height: 12),
 
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: StreamBuilder<Routine?>(
@@ -695,11 +786,16 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   final classes = routineDoc?.classes ?? [];
 
                   if (classes.isEmpty) {
-                    return const Center(child: Text('No routine found for this day and batch.'));
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: Text('No routine found for this day and batch.')),
+                    );
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.all(20),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(0),
                     itemCount: classes.length,
                     itemBuilder: (_, index) {
                       final cls = classes[index];
@@ -924,9 +1020,10 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
               ),
             ),
           ),
-        ],
+          const SizedBox(height: 20),
+          ],
+        ),
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.teal.shade600,
         foregroundColor: Colors.white,

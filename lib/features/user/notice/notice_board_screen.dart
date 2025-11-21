@@ -15,6 +15,17 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    final isTablet = size.width >= 600 && size.width < 1024;
+    
+    final horizontalPadding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
+    final containerMaxWidth = isMobile ? double.infinity : (isTablet ? 600.0 : 700.0);
+    final headerFontSize = isMobile ? 16.0 : (isTablet ? 18.0 : 22.0);
+    final subtitleFontSize = isMobile ? 11.0 : (isTablet ? 12.0 : 13.0);
+    final headerPadding = isMobile ? 10.0 : (isTablet ? 12.0 : 14.0);
+    final iconSize = isMobile ? 20.0 : 24.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: StreamBuilder<List<Notice>>(
@@ -34,14 +45,184 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             return const Center(child: Text('No notices available.'));
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: ListView.builder(
-              itemCount: notices.length,
-              itemBuilder: (context, index) {
-                final notice = notices[index];
-                return _buildNoticeCard(notice);
-              },
+          // Sort notices by date in descending order (newest first)
+          notices.sort((a, b) => b.date.compareTo(a.date));
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: horizontalPadding),
+            child: Center(
+              child: Container(
+                constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Teal Header Section
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(headerPadding),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.teal, Colors.teal.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: isMobile
+                          ? Padding(
+                              padding: EdgeInsets.all(headerPadding),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Notice Board',
+                                        style: TextStyle(
+                                          fontSize: headerFontSize,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Stay updated with latest announcements',
+                                        style: TextStyle(
+                                          fontSize: subtitleFontSize,
+                                          color: Colors.white.withOpacity(0.9),
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Positioned(
+                                    top: -headerPadding,
+                                    right: -headerPadding,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.3),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.campaign_rounded,
+                                        color: Colors.white,
+                                        size: iconSize,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Padding(
+                              padding: EdgeInsets.all(headerPadding),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Notice Board',
+                                              style: TextStyle(
+                                                fontSize: headerFontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              'Stay updated with latest announcements',
+                                              style: TextStyle(
+                                                fontSize: subtitleFontSize,
+                                                color: Colors.white.withOpacity(0.9),
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Positioned(
+                                    top: -headerPadding,
+                                    right: -headerPadding,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.3),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.campaign_rounded,
+                                        color: Colors.white,
+                                        size: iconSize,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
+                    // All Notice Cards Section - Inside the card
+                    Padding(
+                      padding: EdgeInsets.all(headerPadding),
+                      child: Column(
+                        children: List.generate(
+                          notices.length,
+                          (index) => _buildNoticeCard(notices[index]),
+                        ),
+                      ),
+                    ),
+                    // Total Notices Info Section
+                    Padding(
+                      padding: EdgeInsets.all(headerPadding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total Notices: ${notices.length}',
+                            style: TextStyle(
+                              fontSize: subtitleFontSize,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },

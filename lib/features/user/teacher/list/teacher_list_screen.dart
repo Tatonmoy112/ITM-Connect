@@ -21,8 +21,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
   // State
   int? _selectedIndex;
-    int? _showDailyRoutineIndex;
-    String _selectedDay = DateTime.now().weekday == DateTime.sunday
+  int? _showDailyRoutineIndex;
+  bool _showSearchBar = false;
+  String _selectedDay = DateTime.now().weekday == DateTime.sunday
       ? 'Sunday'
       : DateTime.now().weekday == DateTime.monday
         ? 'Monday'
@@ -318,263 +319,484 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    final isTablet = size.width >= 600 && size.width < 1024;
+    
+    final horizontalPadding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
+    final containerMaxWidth = isMobile ? double.infinity : (isTablet ? 600.0 : 700.0);
+    final headerFontSize = isMobile ? 16.0 : (isTablet ? 18.0 : 22.0);
+    final subtitleFontSize = isMobile ? 11.0 : (isTablet ? 12.0 : 13.0);
+    final headerPadding = isMobile ? 10.0 : (isTablet ? 12.0 : 14.0);
+    final iconSize = isMobile ? 20.0 : 24.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // Professional Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Material(
-              elevation: 2,
-              borderRadius: BorderRadius.circular(14),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search teacher by name or role...',
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.teal),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Teal Header Welcome Card Pattern
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: horizontalPadding),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.teal.withOpacity(0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                ),
-                style: const TextStyle(fontSize: 16),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                    _selectedIndex = null;
-                  });
-                },
-              ),
-            ),
-          ),
-
-          // Teacher List (from Firestore)
-          Expanded(
-            child: StreamBuilder<List<Teacher>>(
-              stream: _teacherService.streamAllTeachers(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                final allTeachers = snapshot.data ?? [];
-                final filtered = _searchQuery.isEmpty
-                    ? allTeachers
-                    : allTeachers.where((t) {
-                        final q = _searchQuery.toLowerCase();
-                        return t.name.toLowerCase().contains(q) || t.role.toLowerCase().contains(q);
-                      }).toList();
-
-                if (filtered.isEmpty) {
-                  return const Center(child: Text('No teachers found.'));
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final teacher = filtered[index];
-                    final isSelected = _selectedIndex == index;
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedIndex = null;
-                          } else {
-                            _selectedIndex = index;
-                          }
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                        margin: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    children: [
+                      // Teal Header Section
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(isMobile ? 8 : (isTablet ? 10 : 12)),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          gradient: LinearGradient(
+                            colors: [Colors.teal, Colors.teal.shade700],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Teal Header
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.teal,
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(12),
-                                  topRight: Radius.circular(12),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Column(
+                        child: isMobile
+                            ? Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          teacher.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
+                                          'Teachers Directory',
+                                          style: TextStyle(
+                                            fontSize: headerFontSize,
                                             fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 2),
                                         Text(
-                                          teacher.role,
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
+                                          'Find and explore teacher information',
+                                          style: TextStyle(
+                                            fontSize: subtitleFontSize,
+                                            color: Colors.white.withOpacity(0.9),
+                                            letterSpacing: 0.3,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Teacher Avatar
-                                  CircleAvatar(
-                                    radius: 28,
-                                    backgroundColor: Colors.white.withOpacity(0.2),
-                                    backgroundImage: (() {
-                                      final url = teacher.imageUrl.trim();
-                                      if (url.isEmpty) return null;
-                                      final lower = url.toLowerCase();
-                                      try {
-                                        if (lower.startsWith('http://') || lower.startsWith('https://')) {
-                                          return NetworkImage(url);
-                                        }
-                                      } catch (_) {}
-                                      return null;
-                                    })(),
-                                    child: (teacher.imageUrl.trim().isEmpty)
-                                        ? Text(
-                                            _getInitials(teacher.name),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
+                                    Positioned(
+                                      top: -headerPadding,
+                                      right: -headerPadding,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _showSearchBar = !_showSearchBar;
+                                            if (!_showSearchBar) {
+                                              _searchController.clear();
+                                              _searchQuery = '';
+                                              _selectedIndex = null;
+                                            }
+                                          });
+                                        },
+                                        child: AnimatedScale(
+                                          scale: _showSearchBar ? 1.1 : 1.0,
+                                          duration: const Duration(milliseconds: 200),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: _showSearchBar 
+                                                ? Colors.white.withOpacity(0.35)
+                                                : Colors.white.withOpacity(0.25),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: Colors.white.withOpacity(_showSearchBar ? 0.5 : 0.3),
+                                                width: 2,
+                                              ),
                                             ),
-                                          )
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    isSelected ? Icons.expand_less : Icons.expand_more,
-                                    color: Colors.white,
+                                            child: Icon(
+                                              Icons.person_search_rounded,
+                                              color: Colors.white,
+                                              size: iconSize,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Teachers Directory',
+                                                style: TextStyle(
+                                                  fontSize: headerFontSize,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Find and explore teacher information',
+                                                style: TextStyle(
+                                                  fontSize: subtitleFontSize,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Positioned(
+                                      top: -headerPadding,
+                                      right: -headerPadding,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _showSearchBar = !_showSearchBar;
+                                            if (!_showSearchBar) {
+                                              _searchController.clear();
+                                              _searchQuery = '';
+                                              _selectedIndex = null;
+                                            }
+                                          });
+                                        },
+                                        child: AnimatedScale(
+                                          scale: _showSearchBar ? 1.1 : 1.0,
+                                          duration: const Duration(milliseconds: 200),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: _showSearchBar 
+                                                ? Colors.white.withOpacity(0.35)
+                                                : Colors.white.withOpacity(0.25),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: Colors.white.withOpacity(_showSearchBar ? 0.5 : 0.3),
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.person_search_rounded,
+                                              color: Colors.white,
+                                              size: iconSize,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                      // Conditional search bar
+                      if (_showSearchBar) ...[
+                        Padding(
+                          padding: EdgeInsets.all(headerPadding),
+                          child: Material(
+                            elevation: 2,
+                            borderRadius: BorderRadius.circular(14),
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              decoration: InputDecoration(
+                                hintText: 'Search teacher by name or role...',
+                                prefixIcon: const Icon(Icons.search_rounded, color: Colors.teal),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.close_rounded, color: Colors.teal),
+                                  onPressed: () {
+                                    setState(() {
+                                      _showSearchBar = false;
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                      _selectedIndex = null;
+                                    });
+                                  },
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 16),
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                  _selectedIndex = null;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            // Teacher List (from Firestore) - preserved Firebase logic
+            Center(
+              child: Container(
+                constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: StreamBuilder<List<Teacher>>(
+                  stream: _teacherService.streamAllTeachers(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    final allTeachers = snapshot.data ?? [];
+                    final filtered = _searchQuery.isEmpty
+                        ? allTeachers
+                        : allTeachers.where((t) {
+                            final q = _searchQuery.toLowerCase();
+                            return t.name.toLowerCase().contains(q) || t.role.toLowerCase().contains(q);
+                          }).toList();
+
+                    if (filtered.isEmpty) {
+                      return const Center(child: Text('No teachers found.'));
+                    }
+
+                    return Column(
+                      children: List.generate(
+                        filtered.length,
+                        (index) {
+                          final teacher = filtered[index];
+                          final isSelected = _selectedIndex == index;
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedIndex = null;
+                                } else {
+                                  _selectedIndex = index;
+                                }
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeInOut,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                            ),
-                            // Content
-                            Padding(
-                              padding: const EdgeInsets.all(14),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.email, size: 16, color: Colors.teal),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          teacher.email,
-                                          style: const TextStyle(fontSize: 13, color: Colors.black87),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                  // Teal Header
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(12),
+                                        topRight: Radius.circular(12),
                                       ),
-                                    ],
-                                  ),
-                                  // Expanded View
-                                  if (isSelected) ...[
-                                    const SizedBox(height: 16),
-                                    // Action Buttons
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
-                                          child: ElevatedButton.icon(
-                                            icon: const Icon(Icons.visibility_outlined, size: 16),
-                                            label: const Text('Daily Routine'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.teal,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(6),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                teacher.name,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                            ),
-                                            onPressed: () {
-                                              setState(() {
-                                                if (_showDailyRoutineIndex == index) {
-                                                  _showDailyRoutineIndex = null;
-                                                } else {
-                                                  _showDailyRoutineIndex = index;
-                                                }
-                                              });
-                                            },
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                teacher.role,
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                                            label: const Text('Get PDF'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.deepOrange,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              _generateTeacherPDF(teacher);
-                                            },
-                                          ),
+                                        CircleAvatar(
+                                          radius: 28,
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          backgroundImage: (() {
+                                            final url = teacher.imageUrl.trim();
+                                            if (url.isEmpty) return null;
+                                            final lower = url.toLowerCase();
+                                            try {
+                                              if (lower.startsWith('http://') || lower.startsWith('https://')) {
+                                                return NetworkImage(url);
+                                              }
+                                            } catch (_) {}
+                                            return null;
+                                          })(),
+                                          child: (teacher.imageUrl.trim().isEmpty)
+                                              ? Text(
+                                                  _getInitials(teacher.name),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                )
+                                              : null,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          isSelected ? Icons.expand_less : Icons.expand_more,
+                                          color: Colors.white,
                                         ),
                                       ],
                                     ),
-                                    // Daily routine area (from Firestore)
-                                    if (_showDailyRoutineIndex == index) ...[
-                                      const SizedBox(height: 12),
-                                      _buildDaySelector(),
-                                      const SizedBox(height: 12),
-                                      _buildTeacherRoutineWidget(teacher),
-                                    ],
-                                  ],
+                                  ),
+                                  // Content
+                                  Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.email, size: 16, color: Colors.teal),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                teacher.email,
+                                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (isSelected) ...[
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  icon: const Icon(Icons.schedule_rounded, size: 16),
+                                                  label: Text(
+                                                    _showDailyRoutineIndex == index ? 'Hide' : 'Routine',
+                                                    style: const TextStyle(fontSize: 12),
+                                                  ),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.teal,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      if (_showDailyRoutineIndex == index) {
+                                                        _showDailyRoutineIndex = null;
+                                                      } else {
+                                                        _showDailyRoutineIndex = index;
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  icon: const Icon(Icons.download_rounded, size: 16),
+                                                  label: const Text(
+                                                    'PDF',
+                                                    style: TextStyle(fontSize: 12),
+                                                  ),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.deepOrange,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                  ),
+                                                  onPressed: () {
+                                                    _generateTeacherPDF(teacher);
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (_showDailyRoutineIndex == index) ...[
+                                            const SizedBox(height: 12),
+                                            _buildDaySelector(),
+                                            const SizedBox(height: 12),
+                                            _buildTeacherRoutineWidget(teacher),
+                                          ],
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     );
                   },
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -702,26 +924,109 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             child: Center(child: Text('No classes scheduled for this day.')),
           );
         }
-        return SizedBox(
-          height: 300,
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 300),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: classesToday.map((c) {
+                // Extract batch from routine ID (format: batch_semester)
+                final routineId = routines.firstWhere(
+                  (r) => r.classes.any((rc) => 
+                    rc.courseName == c.courseName && 
+                    rc.teacherInitial.trim().toUpperCase() == teacherInitials
+                  ),
+                  orElse: () => routines.first,
+                ).id;
+                final batchName = routineId.split('_').first;
+                
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: const Icon(Icons.class_rounded, color: Colors.deepPurple),
-                    title: Text('${c.courseName} (${c.courseCode})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 6),
-                        Row(children: [const Icon(Icons.schedule, size: 14, color: Colors.grey), const SizedBox(width: 6), Text(c.time)]),
-                        const SizedBox(height: 4),
-                        Row(children: [const Icon(Icons.location_on, size: 14, color: Colors.grey), const SizedBox(width: 6), Text('Room: ${c.room}')]),
+                  elevation: 2,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        // Header with batch info
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.layers_rounded, size: 16, color: Colors.teal.shade700),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Batch: $batchName',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Course Name and Code
+                        Row(
+                          children: [
+                            const Icon(Icons.class_rounded, color: Colors.deepPurple, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    c.courseName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  Text(
+                                    c.courseCode,
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        // Time and Room in a row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.schedule, size: 14, color: Colors.blue.shade600),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    c.time,
+                                    style: TextStyle(fontSize: 13, color: Colors.blue.shade600, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_on, size: 14, color: Colors.orange.shade600),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Room: ${c.room}',
+                                    style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
+                      ),
                     ),
                   ),
                 );
