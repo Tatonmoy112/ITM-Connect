@@ -1,0 +1,74 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter widget-preview start --machine --web-server --dtd-url ws://127.0.0.1:52432/bNk55_TLgxs= --devtools-server-address http://127.0.0.1:9100/
+
+## exception
+
+StateError: Bad state: Unable to find the context to C:\Users\tonmoy\Desktop\ITM Connect\untitled\ITM-Connect\windows\flutter\ephemeral\.plugin_symlinks\cloud_firestore\dartpad\lib\main.dart
+
+```
+#0      AnalysisContextCollectionImpl.contextFor (package:analyzer/src/dart/analysis/analysis_context_collection.dart:177:5)
+#1      PreviewDetector._onFileSystemEvent.<anonymous closure> (package:flutter_tools/src/widget_preview/preview_detector.dart:146:50)
+#2      PreviewDetectorMutex.runGuarded (package:flutter_tools/src/widget_preview/utils.dart:99:35)
+<asynchronous suspension>
+#3      PreviewDetector._onFileSystemEvent (package:flutter_tools/src/widget_preview/preview_detector.dart:118:5)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[✓] Flutter (Channel stable, 3.38.1, on Microsoft Windows [Version 10.0.19045.6466], locale en-US) [8.1s]
+    • Flutter version 3.38.1 on channel stable at E:\flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision b45fa18946 (8 days ago), 2025-11-12 22:09:06 -0600
+    • Engine revision b5990e5ccc
+    • Dart version 3.10.0
+    • DevTools version 2.51.1
+    • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets, omit-legacy-version-file, enable-lldb-debugging
+
+[☠] Windows Version (the doctor check crashed)
+    ✗ Due to an error, the doctor check did not complete. If the error message below is not helpful, please let us know about this issue at https://github.com/flutter/flutter/issues.
+    ✗ Exception: Windows Version exceeded maximum allowed duration of 0:04:30.000000
+    • 
+
+[!] Android toolchain - develop for Android devices (Android SDK version 36.0.0) [38.8s]
+    • Android SDK at C:\Users\tonmoy\AppData\Local\Android\sdk
+    • Emulator version 35.5.10.0 (build_id 13402964) (CL:N/A)
+    ✗ cmdline-tools component is missing.
+      Try installing or updating Android Studio.
+      Alternatively, download the tools from https://developer.android.com/studio#command-line-tools-only and make sure to set the ANDROID_HOME environment variable.
+      See https://developer.android.com/studio/command-line for more details.
+    ✗ Android license status unknown.
+      Run `flutter doctor --android-licenses` to accept the SDK licenses.
+      See https://flutter.dev/to/windows-android-setup for more details.
+
+[✓] Chrome - develop for the web [81ms]
+    • Chrome at C:\Program Files\Google\Chrome\Application\chrome.exe
+
+[✓] Visual Studio - develop Windows apps (Visual Studio Build Tools 2019 16.11.48) [80ms]
+    • Visual Studio at C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools
+    • Visual Studio Build Tools 2019 version 16.11.36128.20
+    • Windows 10 SDK version 10.0.19041.0
+
+[✓] Connected device (3 available) [113.3s]
+    • Windows (desktop) • windows • windows-x64    • Microsoft Windows [Version 10.0.19045.6466]
+    • Chrome (web)      • chrome  • web-javascript • Google Chrome 142.0.7444.176
+    • Edge (web)        • edge    • web-javascript • Microsoft Edge 142.0.3595.90
+
+[!] Network resources [106.4s]
+    ✗ A cryptographic error occurred while checking "https://pub.dev/": Connection terminated during handshake
+      You may be experiencing a man-in-the-middle attack, your network may be compromised, or you may have malware installed on your computer.
+    ✗ A cryptographic error occurred while checking "https://storage.googleapis.com/": Connection terminated during handshake
+      You may be experiencing a man-in-the-middle attack, your network may be compromised, or you may have malware installed on your computer.
+    ✗ A cryptographic error occurred while checking "https://maven.google.com/": Connection terminated during handshake
+      You may be experiencing a man-in-the-middle attack, your network may be compromised, or you may have malware installed on your computer.
+    ✗ A cryptographic error occurred while checking "https://cocoapods.org/": Connection terminated during handshake
+      You may be experiencing a man-in-the-middle attack, your network may be compromised, or you may have malware installed on your computer.
+    ✗ An HTTP error occurred while checking "https://github.com/": Connection closed before full header was received
+
+! Doctor found issues in 3 categories.
+```
