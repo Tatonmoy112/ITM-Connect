@@ -268,10 +268,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         ),
       );
 
-      // Save PDF using cross-platform service
+      // Save PDF using cross-platform service and open it
       final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
       final pdfBytes = await pdf.save();
-      await PdfDownloadService.downloadPdf(
+      await PdfDownloadService.downloadAndOpenPdf(
         pdfBytes: pdfBytes.toList(),
         fileName: fileName,
       );
@@ -564,7 +564,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   ),
                 ),
               ),
-            ),
+            ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
             
             // Teacher List (from Firestore) - preserved Firebase logic
             Center(
@@ -787,7 +787,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                 ],
                               ),
                             ),
-                          );
+                          ).animate().fadeIn(duration: 800.ms, delay: Duration(milliseconds: 300 + (index * 100))).slideY(begin: 0.3, end: 0);
                         },
                       ),
                     );
@@ -996,32 +996,30 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        // Time and Room in a row
-                        Row(
+                        // Time and Room vertically
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Icon(Icons.schedule, size: 14, color: Colors.blue.shade600),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    c.time,
-                                    style: TextStyle(fontSize: 13, color: Colors.blue.shade600, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
+                            Row(
+                              children: [
+                                Icon(Icons.schedule, size: 14, color: Colors.blue.shade600),
+                                const SizedBox(width: 6),
+                                Text(
+                                  c.time,
+                                  style: TextStyle(fontSize: 13, color: Colors.blue.shade600, fontWeight: FontWeight.w600),
+                                ),
+                              ],
                             ),
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Icon(Icons.location_on, size: 14, color: Colors.orange.shade600),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Room: ${c.room}',
-                                    style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, size: 14, color: Colors.orange.shade600),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Room: ${c.room}',
+                                  style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
+                                ),
+                              ],
                             ),
                           ],
                         ),

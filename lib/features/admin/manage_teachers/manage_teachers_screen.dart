@@ -62,14 +62,13 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
       );
 
       if (result != null && result.files.isNotEmpty) {
-        setModalState(() {});
-        
         final imageFile = File(result.files.first.path!);
         final uploadedUrl = await _uploadImageToImageBB(imageFile);
         
         if (uploadedUrl != null) {
-          imageUrlController.text = uploadedUrl;
-          setModalState(() {});
+          setModalState(() {
+            imageUrlController.text = uploadedUrl;
+          });
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -130,295 +129,308 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
       context: context,
       builder: (_) {
         return StatefulBuilder(builder: (context, setModalState) {
+          final size = MediaQuery.of(context).size;
+          final dlgIsMobile = size.width < 600;
+          final dlgIsTablet = size.width >= 600 && size.width < 1024;
+          final dialogMaxWidth = dlgIsMobile ? size.width - 32 : (dlgIsTablet ? 600.0 : 700.0);
+          final dlgPadding = dlgIsMobile ? 12.0 : (dlgIsTablet ? 14.0 : 18.0);
+          final maxDialogHeight = size.height * 0.9;
+
           return Dialog(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Teal Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.teal,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                      topRight: Radius.circular(4),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              teacher == null ? 'Add New Teacher' : 'Edit Teacher Details',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (teacher != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'ID: ${teacher.id}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ]
-                          ],
-                        ),
+            insetPadding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: dialogMaxWidth,
+                maxHeight: maxDialogHeight,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Teal Header
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
                       ),
-                      // Current Photo Preview
-                      if (teacher != null && imageUrlController.text.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            imageUrlController.text,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: Colors.white10,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.image, color: Colors.white30),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // Form Content
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: SingleChildScrollView(
-                    child: SizedBox(
-                      width: 450,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Full Name
-                          TextField(
-                            controller: nameController,
-                            decoration: InputDecoration(
-                              labelText: 'Full Name',
-                              prefixIcon: const Icon(Icons.person),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              errorText: showNameError ? 'Required' : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          // Email
-                          TextField(
-                            controller: emailController,
-                            decoration: InputDecoration(
-                              labelText: 'Email',
-                              prefixIcon: const Icon(Icons.email),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              errorText: showEmailError ? 'Required' : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          // Role
-                          TextField(
-                            controller: roleController,
-                            decoration: InputDecoration(
-                              labelText: 'Role',
-                              prefixIcon: const Icon(Icons.work),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              errorText: showRoleError ? 'Required' : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          // Initial
-                          TextField(
-                            controller: initialController,
-                            enabled: teacher == null,
-                            decoration: InputDecoration(
-                              labelText: 'Initial',
-                              prefixIcon: const Icon(Icons.badge),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              errorText: showInitialError ? initialErrorMessage : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              filled: teacher != null,
-                              fillColor: teacher != null ? Colors.grey.shade100 : Colors.transparent,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          // Photo Upload Section
-                          Column(
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Photo',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 8),
-                              // Pick Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  onPressed: isLoading
-                                      ? null
-                                      : () async {
-                                          await _pickAndUploadImage(imageUrlController, setModalState);
-                                        },
-                                  icon: const Icon(Icons.image, color: Colors.white),
-                                  label: const Text(
-                                    'Pick Photo',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
+                              Text(
+                                teacher == null ? 'Add New Teacher' : 'Edit Teacher Details',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              // Delete Button (shown only if photo exists)
-                              if (imageUrlController.text.isNotEmpty) ...[
+                              if (teacher != null) ...[
                                 const SizedBox(height: 8),
+                                Text(
+                                  'ID: ${teacher.id}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ]
+                            ],
+                          ),
+                        ),
+                        // Current Photo Preview
+                        if (teacher != null && imageUrlController.text.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              imageUrlController.text,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white10,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.image, color: Colors.white30),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Form Content - Scrollable
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.all(dlgPadding),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Full Name
+                            TextField(
+                              controller: nameController,
+                              decoration: InputDecoration(
+                                labelText: 'Full Name',
+                                prefixIcon: const Icon(Icons.person),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                errorText: showNameError ? 'Required' : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            // Email
+                            TextField(
+                              controller: emailController,
+                              decoration: InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: const Icon(Icons.email),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                errorText: showEmailError ? 'Required' : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            // Role
+                            TextField(
+                              controller: roleController,
+                              decoration: InputDecoration(
+                                labelText: 'Role',
+                                prefixIcon: const Icon(Icons.work),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                errorText: showRoleError ? 'Required' : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            // Initial
+                            TextField(
+                              controller: initialController,
+                              enabled: teacher == null,
+                              decoration: InputDecoration(
+                                labelText: 'Initial',
+                                prefixIcon: const Icon(Icons.badge),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                errorText: showInitialError ? initialErrorMessage : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                filled: teacher != null,
+                                fillColor: teacher != null ? Colors.grey.shade100 : Colors.transparent,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Photo Upload Section
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Photo',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 8),
+                                // Pick Button
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red.shade500,
+                                      backgroundColor: Colors.teal,
                                       padding: const EdgeInsets.symmetric(vertical: 10),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        imageUrlController.clear();
-                                      });
-                                    },
-                                    icon: const Icon(Icons.delete, color: Colors.white),
+                                    onPressed: isLoading
+                                        ? null
+                                        : () async {
+                                            await _pickAndUploadImage(imageUrlController, setModalState);
+                                          },
+                                    icon: const Icon(Icons.image, color: Colors.white),
                                     label: const Text(
-                                      'Delete Photo',
+                                      'Pick Photo',
                                       style: TextStyle(color: Colors.white),
                                     ),
                                   ),
                                 ),
+                                // Delete Button (shown only if photo exists)
+                                if (imageUrlController.text.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red.shade500,
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        setModalState(() {
+                                          imageUrlController.clear();
+                                        });
+                                      },
+                                      icon: const Icon(Icons.delete, color: Colors.white),
+                                      label: const Text(
+                                        'Delete Photo',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Buttons Footer
+                  Container(
+                    padding: EdgeInsets.all(dlgPadding),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: isLoading ? null : () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.grey.shade600),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Buttons Footer
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: isLoading ? null : () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.grey.shade600),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                        ),
-                        onPressed: isLoading
-                            ? null
-                            : () async {
-                                final name = nameController.text.trim();
-                                final email = emailController.text.trim();
-                                final role = roleController.text.trim();
-                                final initial = initialController.text.trim().toUpperCase();
-                                final imageUrl = imageUrlController.text.trim();
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                          ),
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  final name = nameController.text.trim();
+                                  final email = emailController.text.trim();
+                                  final role = roleController.text.trim();
+                                  final initial = initialController.text.trim().toUpperCase();
+                                  final imageUrl = imageUrlController.text.trim();
 
-                                setModalState(() {
-                                  showNameError = name.isEmpty;
-                                  showEmailError = email.isEmpty;
-                                  showRoleError = role.isEmpty;
-                                  showInitialError = initial.isEmpty;
-                                  initialErrorMessage = initial.isEmpty ? 'Required' : null;
-                                });
+                                  setModalState(() {
+                                    showNameError = name.isEmpty;
+                                    showEmailError = email.isEmpty;
+                                    showRoleError = role.isEmpty;
+                                    showInitialError = initial.isEmpty;
+                                    initialErrorMessage = initial.isEmpty ? 'Required' : null;
+                                  });
 
-                                if (showNameError ||
-                            showEmailError ||
-                            showRoleError ||
-                            showInitialError) {
-                          return;
-                        }
+                                  if (showNameError ||
+                              showEmailError ||
+                              showRoleError ||
+                              showInitialError) {
+                        return;
+                      }
 
-                        setModalState(() => isLoading = true);
+                      setModalState(() => isLoading = true);
 
-                        try {
-                          await _teacherService.addOrUpdateTeacher(
-                            teacherInitial: initial,
-                            name: name,
-                            email: email,
-                            role: role,
-                            imageUrl: imageUrl,
+                      try {
+                        await _teacherService.addOrUpdateTeacher(
+                          teacherInitial: initial,
+                          name: name,
+                          email: email,
+                          role: role,
+                          imageUrl: imageUrl,
+                        );
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(teacher == null ? 'Teacher added successfully' : 'Teacher updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
                           );
-                          if (mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(teacher == null ? 'Teacher added successfully' : 'Teacher updated successfully'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          setModalState(() => isLoading = false);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
-                            );
-                          }
                         }
-                      },
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      } catch (e) {
+                        setModalState(() => isLoading = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  teacher == null ? 'Add Teacher' : 'Update',
+                                  style: const TextStyle(color: Colors.white),
                                 ),
-                              )
-                            : Text(
-                                teacher == null ? 'Add Teacher' : 'Update',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         });
@@ -464,11 +476,11 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     );
   }
 
-  Widget _buildTeacherCard(Teacher teacher) {
+  Widget _buildTeacherCard(Teacher teacher, bool isMobile, bool isTablet, double contentPadding, double cardMargin) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeInOut,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: cardMargin),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -485,7 +497,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
         children: [
           // Professional Teal Header with Avatar
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(contentPadding),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.teal, Colors.teal.shade700],
@@ -512,7 +524,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                     ),
                   ),
                   child: CircleAvatar(
-                    radius: 32,
+                    radius: isMobile ? 24 : 32,
                     backgroundColor: Colors.white.withOpacity(0.15),
                     backgroundImage: (() {
                       final url = teacher.imageUrl.trim();
@@ -551,7 +563,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                         : null,
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: isMobile ? 10 : 14),
                 // Name and ID Section
                 Expanded(
                   child: Column(
@@ -560,9 +572,9 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                     children: [
                       Text(
                         teacher.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 17,
+                          fontSize: isMobile ? 15 : 17,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.3,
                         ),
@@ -593,7 +605,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
           ),
           // Content Section
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(contentPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -687,7 +699,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
           ),
           // Action Buttons Footer
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: contentPadding, vertical: isMobile ? 8 : 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -704,26 +716,29 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                         ),
                       ],
                     ),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: isMobile ? 32 : 36,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: 0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      onPressed: () => _showTeacherForm(teacher: teacher),
-                      icon: const Icon(Icons.edit_rounded, size: 18),
-                      label: const Text(
-                        'Edit',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        onPressed: () => _showTeacherForm(teacher: teacher),
+                        icon: Icon(Icons.edit_rounded, size: isMobile ? 16 : 18),
+                        label: Text(
+                          'Edit',
+                          style: TextStyle(fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: isMobile ? 8 : 10),
                 // Delete Button
                 Expanded(
                   child: Container(
@@ -737,21 +752,24 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                         ),
                       ],
                     ),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade500,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: isMobile ? 32 : 36,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade500,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: 0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      onPressed: () => _deleteTeacher(teacher.id),
-                      icon: const Icon(Icons.delete_rounded, size: 18),
-                      label: const Text(
-                        'Delete',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        onPressed: () => _deleteTeacher(teacher.id),
+                        icon: Icon(Icons.delete_rounded, size: isMobile ? 16 : 18),
+                        label: Text(
+                          'Delete',
+                          style: TextStyle(fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),
@@ -764,10 +782,20 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    final isTablet = size.width >= 600 && size.width < 1024;
+
+    final horizontalPadding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
+    final containerMaxWidth = isMobile ? double.infinity : (isTablet ? 600.0 : 700.0);
+    final headerFontSize = isMobile ? 18.0 : (isTablet ? 20.0 : 24.0);
+    final subtitleFontSize = isMobile ? 12.0 : (isTablet ? 13.0 : 14.0);
+    final headerPadding = isMobile ? 12.0 : (isTablet ? 16.0 : 20.0);
+    final cardMargin = isMobile ? 12.0 : (isTablet ? 14.0 : 16.0);
+    final contentPadding = isMobile ? 12.0 : (isTablet ? 14.0 : 16.0);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
@@ -775,553 +803,565 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
           children: [
             // Welcome Card with Stats and Search
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.teal.withOpacity(0.2),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Teal Header Section
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.teal, Colors.teal.shade700],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
+              padding: EdgeInsets.fromLTRB(horizontalPadding, horizontalPadding, horizontalPadding, 0),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.teal.withOpacity(0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                        spreadRadius: 2,
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Icon Badge
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 2,
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Teal Header Section
+                      Container(
+                        padding: EdgeInsets.all(headerPadding),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.teal, Colors.teal.shade700],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Icon Badge
+                            Container(
+                              padding: EdgeInsets.all(isMobile ? 8 : 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.waving_hand,
+                                color: Colors.white,
+                                size: isMobile ? 24 : 32,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.waving_hand,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Text Content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Teachers Hub',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
+                            SizedBox(width: isMobile ? 12 : 16),
+                            // Text Content
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Teachers Hub',
+                                    style: TextStyle(
+                                      fontSize: headerFontSize,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'View, manage and organize your online teaching team efficiently',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white.withOpacity(0.9),
-                                    letterSpacing: 0.3,
+                                  SizedBox(height: isMobile ? 4 : 6),
+                                  Text(
+                                    'View, manage and organize your online teaching team efficiently',
+                                    style: TextStyle(
+                                      fontSize: subtitleFontSize,
+                                      color: Colors.white.withOpacity(0.9),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Stats and Search Section
+                      Padding(
+                        padding: EdgeInsets.all(headerPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Stats Row
+                            StreamBuilder<List<Teacher>>(
+                              stream: _teacherService.streamAllTeachers(),
+                              builder: (context, snapshot) {
+                                final teacherCount = snapshot.data?.length ?? 0;
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'Total Teachers',
+                                        teacherCount.toString(),
+                                        Colors.teal,
+                                        Icons.people,
+                                        isMobile,
+                                        isTablet,
+                                      ),
+                                    ),
+                                    SizedBox(width: isMobile ? 10 : 12),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'Active',
+                                        teacherCount.toString(),
+                                        Colors.orange,
+                                        Icons.check_circle,
+                                        isMobile,
+                                        isTablet,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            SizedBox(height: isMobile ? 16 : 20),
+                            // Search Bar with Suggestions
+                            StreamBuilder<List<Teacher>>(
+                              stream: _teacherService.streamAllTeachers(),
+                              builder: (context, snapshot) {
+                                final allTeachers = snapshot.data ?? [];
+                                final suggestions = _searchQuery.isEmpty
+                                    ? []
+                                    : allTeachers.where((t) {
+                                        final q = _searchQuery;
+                                        return t.name.toLowerCase().contains(q) ||
+                                            t.role.toLowerCase().contains(q) ||
+                                            t.email.toLowerCase().contains(q);
+                                      }).toList();
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Search Bar
+                                    Material(
+                                      elevation: 2,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: TextField(
+                                        controller: _searchController,
+                                        decoration: InputDecoration(
+                                          hintText: 'Search teacher by name or role...',
+                                          prefixIcon: const Icon(Icons.search_rounded, color: Colors.teal),
+                                          suffixIcon: _searchQuery.isNotEmpty
+                                              ? IconButton(
+                                                  icon: const Icon(Icons.close, color: Colors.grey),
+                                                  onPressed: () {
+                                                    _searchController.clear();
+                                                    setState(() {
+                                                      _searchQuery = '';
+                                                    });
+                                                  },
+                                                )
+                                              : null,
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                        style: const TextStyle(fontSize: 15),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _searchQuery = value.toLowerCase();
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    // Suggestions Dropdown
+                                    if (_searchQuery.isNotEmpty && suggestions.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Colors.teal.withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.teal.withOpacity(0.1),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: BoxConstraints(
+                                          maxHeight: suggestions.length > 3 ? 200.0 : double.infinity,
+                                        ),
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          physics: suggestions.length > 3
+                                              ? const AlwaysScrollableScrollPhysics()
+                                              : const NeverScrollableScrollPhysics(),
+                                          itemCount: suggestions.length,
+                                          itemBuilder: (context, index) {
+                                            final teacher = suggestions[index];
+                                            return Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  _showTeacherForm(teacher: teacher);
+                                                },
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      // Avatar
+                                                      CircleAvatar(
+                                                        radius: 18,
+                                                        backgroundColor: Colors.teal.withOpacity(0.1),
+                                                        backgroundImage: (() {
+                                                          final url = teacher.imageUrl.trim();
+                                                          if (url.isEmpty) return null;
+                                                          final lower = url.toLowerCase();
+                                                          try {
+                                                            if (lower.startsWith('http://') ||
+                                                                lower.startsWith('https://')) {
+                                                              return NetworkImage(url);
+                                                            }
+                                                          } catch (_) {}
+                                                          return null;
+                                                        })(),
+                                                        child: teacher.imageUrl.trim().isEmpty
+                                                            ? Text(
+                                                                teacher.name.isNotEmpty
+                                                                    ? teacher.name[0].toUpperCase()
+                                                                    : '?',
+                                                                style: const TextStyle(
+                                                                  color: Colors.teal,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: 12,
+                                                                ),
+                                                              )
+                                                            : null,
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      // Teacher Info
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              teacher.name,
+                                                              style: const TextStyle(
+                                                                fontSize: 14,
+                                                                fontWeight: FontWeight.w600,
+                                                                color: Colors.black87,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                            const SizedBox(height: 2),
+                                                            Text(
+                                                              teacher.role,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: Colors.grey.shade600,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      // Icon
+                                                      Icon(
+                                                        Icons.arrow_forward_rounded,
+                                                        size: 18,
+                                                        color: Colors.teal.withOpacity(0.6),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                    // No suggestions message
+                                    if (_searchQuery.isNotEmpty &&
+                                        suggestions.isEmpty &&
+                                        allTeachers.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.05),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.orange.withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.info_outline,
+                                              size: 18,
+                                              color: Colors.orange.shade600,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'No teachers match your search',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.orange.shade600,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
+            // Teachers List
+            Padding(
+              padding: EdgeInsets.fromLTRB(horizontalPadding, horizontalPadding, horizontalPadding, horizontalPadding),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: containerMaxWidth),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: StreamBuilder<List<Teacher>>(
+                      stream: _teacherService.streamAllTeachers(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: Colors.teal),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline,
+                                        size: 48,
+                                        color: Colors.red.shade700,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Error loading teachers',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.red.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '${snapshot.error}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.red.shade600,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Stats and Search Section
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Stats Row
-                          StreamBuilder<List<Teacher>>(
-                            stream: _teacherService.streamAllTeachers(),
-                            builder: (context, snapshot) {
-                              final teacherCount = snapshot.data?.length ?? 0;
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'Total Teachers',
-                                      teacherCount.toString(),
-                                      Colors.teal,
-                                      Icons.people,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'Active',
-                                      teacherCount.toString(),
-                                      Colors.orange,
-                                      Icons.check_circle,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          // Search Bar with Suggestions
-                          StreamBuilder<List<Teacher>>(
-                            stream: _teacherService.streamAllTeachers(),
-                            builder: (context, snapshot) {
-                              final allTeachers = snapshot.data ?? [];
-                              final suggestions = _searchQuery.isEmpty
-                                  ? []
-                                  : allTeachers.where((t) {
-                                      final q = _searchQuery;
-                                      return t.name.toLowerCase().contains(q) ||
-                                          t.role.toLowerCase().contains(q) ||
-                                          t.email.toLowerCase().contains(q);
-                                    }).toList();
+                          );
+                        }
 
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Search Bar
-                                  Material(
-                                    elevation: 2,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: TextField(
-                                      controller: _searchController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Search teacher by name or role...',
-                                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.teal),
-                                        suffixIcon: _searchQuery.isNotEmpty
-                                            ? IconButton(
-                                                icon: const Icon(Icons.close, color: Colors.grey),
-                                                onPressed: () {
-                                                  _searchController.clear();
-                                                  setState(() {
-                                                    _searchQuery = '';
-                                                  });
-                                                },
-                                              )
-                                            : null,
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide.none,
+                        final allTeachers = snapshot.data ?? [];
+                        final filtered = _searchQuery.isEmpty
+                            ? allTeachers
+                            : allTeachers.where((t) {
+                                final q = _searchQuery;
+                                return t.name.toLowerCase().contains(q) ||
+                                    t.role.toLowerCase().contains(q) ||
+                                    t.email.toLowerCase().contains(q);
+                              }).toList();
+
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        _searchQuery.isEmpty ? Icons.people_outline : Icons.search_off,
+                                        size: 56,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _searchQuery.isEmpty ? 'No teachers yet' : 'No teachers found',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
                                         ),
                                       ),
-                                      style: const TextStyle(fontSize: 15),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _searchQuery = value.toLowerCase();
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                  // Suggestions Dropdown
-                                  if (_searchQuery.isNotEmpty && suggestions.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.teal.withOpacity(0.2),
-                                          width: 1,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.teal.withOpacity(0.1),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      constraints: BoxConstraints(
-                                        maxHeight: suggestions.length > 3 ? 200.0 : double.infinity,
-                                      ),
-                                      child: ListView.builder(
-                                        shrinkWrap: true,
-                                        physics: suggestions.length > 3
-                                            ? const AlwaysScrollableScrollPhysics()
-                                            : const NeverScrollableScrollPhysics(),
-                                        itemCount: suggestions.length,
-                                        itemBuilder: (context, index) {
-                                          final teacher = suggestions[index];
-                                          return Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: () {
-                                                _showTeacherForm(teacher: teacher);
-                                              },
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 10,
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    // Avatar
-                                                    CircleAvatar(
-                                                      radius: 18,
-                                                      backgroundColor: Colors.teal.withOpacity(0.1),
-                                                      backgroundImage: (() {
-                                                        final url = teacher.imageUrl.trim();
-                                                        if (url.isEmpty) return null;
-                                                        final lower = url.toLowerCase();
-                                                        try {
-                                                          if (lower.startsWith('http://') ||
-                                                              lower.startsWith('https://')) {
-                                                            return NetworkImage(url);
-                                                          }
-                                                        } catch (_) {}
-                                                        return null;
-                                                      })(),
-                                                      child: teacher.imageUrl.trim().isEmpty
-                                                          ? Text(
-                                                              teacher.name.isNotEmpty
-                                                                  ? teacher.name[0].toUpperCase()
-                                                                  : '?',
-                                                              style: const TextStyle(
-                                                                color: Colors.teal,
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 12,
-                                                              ),
-                                                            )
-                                                          : null,
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    // Teacher Info
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            teacher.name,
-                                                            style: const TextStyle(
-                                                              fontSize: 14,
-                                                              fontWeight: FontWeight.w600,
-                                                              color: Colors.black87,
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                          ),
-                                                          const SizedBox(height: 2),
-                                                          Text(
-                                                            teacher.role,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors.grey.shade600,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    // Icon
-                                                    Icon(
-                                                      Icons.arrow_forward_rounded,
-                                                      size: 18,
-                                                      color: Colors.teal.withOpacity(0.6),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                  // No suggestions message
-                                  if (_searchQuery.isNotEmpty &&
-                                      suggestions.isEmpty &&
-                                      allTeachers.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.orange.withOpacity(0.2),
-                                          width: 1,
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _searchQuery.isEmpty
+                                            ? 'Tap the + button to add a teacher'
+                                            : 'Try different search keywords',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade600,
                                         ),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.info_outline,
-                                            size: 18,
-                                            color: Colors.orange.shade600,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              'No teachers match your search',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.orange.shade600,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
-            ),
-            // Teachers List
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: StreamBuilder<List<Teacher>>(
-                  stream: _teacherService.streamAllTeachers(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.teal),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 48,
-                                    color: Colors.red.shade700,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Error loading teachers',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${snapshot.error}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.red.shade600,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final allTeachers = snapshot.data ?? [];
-                    final filtered = _searchQuery.isEmpty
-                        ? allTeachers
-                        : allTeachers.where((t) {
-                            final q = _searchQuery;
-                            return t.name.toLowerCase().contains(q) ||
-                                t.role.toLowerCase().contains(q) ||
-                                t.email.toLowerCase().contains(q);
-                          }).toList();
-
-                    if (filtered.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    _searchQuery.isEmpty ? Icons.people_outline : Icons.search_off,
-                                    size: 56,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    _searchQuery.isEmpty ? 'No teachers yet' : 'No teachers found',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _searchQuery.isEmpty
-                                        ? 'Tap the + button to add a teacher'
-                                        : 'Try different search keywords',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Display all teachers with collapsible button
-                    return StatefulBuilder(
-                      builder: (context, setStateLocal) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Show All Teachers Button
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                onPressed: () {
-                                  setStateLocal(() {
-                                    _showAllTeachers = !_showAllTeachers;
-                                  });
-                                },
-                                icon: Icon(
-                                  _showAllTeachers ? Icons.expand_less : Icons.expand_more,
-                                  size: 22,
-                                ),
-                                label: Text(
-                                  _showAllTeachers 
-                                      ? 'Hide All Teachers (${filtered.length})'
-                                      : 'Show All Teachers (${filtered.length})',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.3,
+                                    ],
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            // Teachers List - Shows when expanded
-                            if (_showAllTeachers)
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: filtered.length,
-                                itemBuilder: (_, index) {
-                                  return ScaleTransition(
-                                    scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-                                      CurvedAnimation(
-                                        parent: _animationController,
-                                        curve: Interval(
-                                          0.65 + (index * 0.08),
-                                          math.min(0.65 + (index * 0.08) + 0.25, 1.0),
-                                          curve: Curves.easeOutBack,
-                                        ),
+                          );
+                        }
+
+                        // Display all teachers with collapsible button
+                        return StatefulBuilder(
+                          builder: (context, setStateLocal) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Show All Teachers Button
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.teal,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    onPressed: () {
+                                      setStateLocal(() {
+                                        _showAllTeachers = !_showAllTeachers;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _showAllTeachers ? Icons.expand_less : Icons.expand_more,
+                                      size: 22,
+                                    ),
+                                    label: Text(
+                                      _showAllTeachers 
+                                          ? 'Hide All Teachers (${filtered.length})'
+                                          : 'Show All Teachers (${filtered.length})',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.3,
                                       ),
                                     ),
-                                    child: SlideTransition(
-                                      position: Tween<Offset>(
-                                        begin: const Offset(0.2, 0),
-                                        end: Offset.zero,
-                                      ).animate(
-                                        CurvedAnimation(
-                                          parent: _animationController,
-                                          curve: Interval(
-                                            0.65 + (index * 0.06),
-                                            math.min(0.65 + (index * 0.06) + 0.20, 1.0),
-                                            curve: Curves.easeOut,
-                                          ),
-                                        ),
-                                      ),
-                                      child: FadeTransition(
-                                        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                                  ),
+                                ),
+                                SizedBox(height: isMobile ? 12 : 16),
+                                // Teachers List - Shows when expanded
+                                if (_showAllTeachers)
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: filtered.length,
+                                    itemBuilder: (_, index) {
+                                      return ScaleTransition(
+                                        scale: Tween<double>(begin: 0.8, end: 1.0).animate(
                                           CurvedAnimation(
                                             parent: _animationController,
                                             curve: Interval(
-                                              0.65 + (index * 0.06),
-                                              math.min(0.65 + (index * 0.06) + 0.20, 1.0),
-                                              curve: Curves.easeIn,
+                                              0.65 + (index * 0.08),
+                                              math.min(0.65 + (index * 0.08) + 0.25, 1.0),
+                                              curve: Curves.easeOutBack,
                                             ),
                                           ),
                                         ),
-                                        child: _buildTeacherCard(filtered[index]),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                          ],
+                                        child: SlideTransition(
+                                          position: Tween<Offset>(
+                                            begin: const Offset(0.2, 0),
+                                            end: Offset.zero,
+                                          ).animate(
+                                            CurvedAnimation(
+                                              parent: _animationController,
+                                              curve: Interval(
+                                                0.65 + (index * 0.06),
+                                                math.min(0.65 + (index * 0.06) + 0.20, 1.0),
+                                                curve: Curves.easeOut,
+                                              ),
+                                            ),
+                                          ),
+                                          child: FadeTransition(
+                                            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                                              CurvedAnimation(
+                                                parent: _animationController,
+                                                curve: Interval(
+                                                  0.65 + (index * 0.06),
+                                                  math.min(0.65 + (index * 0.06) + 0.20, 1.0),
+                                                  curve: Curves.easeIn,
+                                                ),
+                                              ),
+                                            ),
+                                            child: _buildTeacherCard(filtered[index], isMobile, isTablet, contentPadding, cardMargin),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            );
+                          },
                         );
                       },
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: isMobile ? 16 : 20),
           ],
         ),
       ),
@@ -1343,9 +1383,16 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+    bool isMobile,
+    bool isTablet,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(isMobile ? 10 : 14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -1360,20 +1407,20 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: isMobile ? 9 : 10,
                   fontWeight: FontWeight.w600,
                   color: color,
                   letterSpacing: 0.3,
                 ),
               ),
-              Icon(icon, color: color, size: 18),
+              Icon(icon, color: color, size: isMobile ? 16 : 18),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isMobile ? 6 : 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: isMobile ? 18 : 24,
               fontWeight: FontWeight.bold,
               color: color,
             ),

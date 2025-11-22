@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/features/admin/dashboard/admin_dashboard_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
@@ -105,27 +106,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
         elevation: 1,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.white,
-              child: Icon(
-                Icons.school,
-                size: 20,
-                color: Colors.teal.shade700,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'ITM Connect',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        title: CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.white,
+          child: Icon(
+            Icons.school,
+            size: 20,
+            color: Colors.teal.shade700,
+          ),
         ),
         actions: [
           IconButton(
@@ -389,6 +377,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0);
   }
 }

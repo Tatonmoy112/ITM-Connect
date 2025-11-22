@@ -165,9 +165,9 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
       final fileName = 'Batch${selectedBatch}_Weekly_Routine.pdf';
       
-      // Save PDF using cross-platform service
+      // Save PDF using cross-platform service and open it
       final pdfBytes = await pdf.save();
-      await PdfDownloadService.downloadPdf(
+      await PdfDownloadService.downloadAndOpenPdf(
         pdfBytes: pdfBytes.toList(),
         fileName: fileName,
       );
@@ -394,7 +394,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                   ),
                 ),
               ),
-            ),
+            ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
 
             // Routine Content Card
             if (selectedBatch == null || selectedDay == null)

@@ -224,7 +224,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 ),
               ),
             ),
-          );
+          ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0);
         },
       ),
     );

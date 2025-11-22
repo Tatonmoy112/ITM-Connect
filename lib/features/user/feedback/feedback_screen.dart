@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/models/feedback.dart' as feedback_model;
 import 'package:itm_connect/services/feedback_service.dart';
 
@@ -437,7 +438,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
             ),
           ),
         ),
-      ),
+      ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
     );
   }
 

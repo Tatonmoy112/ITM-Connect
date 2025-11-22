@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/features/admin/login/admin_login_screen.dart';
 import 'package:itm_connect/features/user/home/user_home_screen.dart';
 import 'package:itm_connect/widgets/app_layout.dart';
@@ -308,7 +309,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                 Padding(
                   padding: const EdgeInsets.only(bottom: 38),
                   child: Center(
-                    child: _buildAnimatedButton(),
+                    child: _buildAnimatedButton().animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
                   ),
                 ),
               ],

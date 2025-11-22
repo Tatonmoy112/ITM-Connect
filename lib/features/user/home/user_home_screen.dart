@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/widgets/app_layout.dart';
 import 'package:itm_connect/features/user/class_routine/class_routine_screen.dart';
 import 'package:itm_connect/features/user/contact/contact_us_screen.dart';
@@ -723,7 +724,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                     ),
                   ),
                 ),
-              ),
+              ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0),
             ],
           ),
         ),
