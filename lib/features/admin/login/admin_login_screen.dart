@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itm_connect/features/admin/dashboard/admin_dashboard_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
@@ -11,16 +12,18 @@ class AdminLoginScreen extends StatefulWidget {
 
 class _AdminLoginScreenState extends State<AdminLoginScreen>
     with SingleTickerProviderStateMixin {
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorMessage;
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
 
   final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -45,7 +48,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -57,25 +60,53 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
   }
 
   void _handleLogin() async {
-    final username = _usernameController.text.trim().toLowerCase();
-    final password = _passwordController.text;
-
     if (_formKey.currentState?.validate() ?? false) {
-      if (_isValidInput(username) && _isValidInput(password)) {
-        if (username == 'admin' && password == 'admin_admin') {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        final email = _emailController.text.trim().toLowerCase();
+        final password = _passwordController.text;
+
+        // Firebase Authentication
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           );
-        } else {
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMsg = 'Login failed';
+        if (e.code == 'user-not-found') {
+          errorMsg = 'Admin account not found.';
+        } else if (e.code == 'wrong-password') {
+          errorMsg = 'Incorrect password.';
+        } else if (e.code == 'invalid-email') {
+          errorMsg = 'Invalid email format.';
+        } else if (e.code == 'user-disabled') {
+          errorMsg = 'This account has been disabled.';
+        }
+
+        if (mounted) {
           setState(() {
-            _errorMessage = 'Incorrect credentials.';
+            _errorMessage = errorMsg;
+            _isLoading = false;
           });
         }
-      } else {
-        setState(() {
-          _errorMessage = 'Invalid characters used.';
-        });
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'An error occurred: ${e.toString()}';
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -222,7 +253,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                 const Align(
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    'Username',
+                                    'Email',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
@@ -231,11 +262,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                 ),
                                 const SizedBox(height: 6),
                                 TextFormField(
-                                  controller: _usernameController,
-                                  autofillHints: const [AutofillHints.username],
+                                  controller: _emailController,
+                                  autofillHints: const [AutofillHints.email],
+                                  keyboardType: TextInputType.emailAddress,
                                   decoration: InputDecoration(
-                                    hintText: 'admin',
-                                    prefixIcon: const Icon(Icons.person),
+                                    hintText: 'admin@example.com',
+                                    prefixIcon: const Icon(Icons.email),
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                     filled: true,
@@ -246,10 +278,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                   ),
                                   validator: (value) {
                                     if (value == null || value.trim().isEmpty) {
-                                      return 'Please enter username';
+                                      return 'Please enter email';
                                     }
-                                    if (!_isValidInput(value.trim())) {
-                                      return 'Only letters, numbers, _ allowed.';
+                                    if (!value.contains('@')) {
+                                      return 'Please enter a valid email';
                                     }
                                     return null;
                                   },
@@ -330,11 +362,20 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                   width: double.infinity,
                                   height: 40,
                                   child: ElevatedButton.icon(
-                                    onPressed: _handleLogin,
-                                    icon: const Icon(Icons.login, size: 18),
-                                    label: const Text('Login'),
+                                    onPressed: _isLoading ? null : _handleLogin,
+                                    icon: _isLoading
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Icon(Icons.login, size: 18),
+                                    label: Text(_isLoading ? 'Logging in...' : 'Login'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.teal,
+                                      backgroundColor: _isLoading ? Colors.grey : Colors.teal,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),

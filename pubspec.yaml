@@ -48,11 +48,7 @@ dependencies:
   path: ^1.9.1
   stack_trace: ^1.12.1
   web: ^1.1.1
-
-  # ✅ (Future) Firebase Integration – Uncomment when ready
-  # firebase_core: ^2.27.0
-  # cloud_firestore: ^4.15.0
-  # firebase_auth: ^4.18.0
+  firebase_auth: ^6.1.2
 
 dev_dependencies:
   flutter_test:
