@@ -30,6 +30,33 @@ class _FeedbackScreenState extends State<FeedbackScreen>
     'Appreciation'
   ];
 
+  /// Validates input to prevent SQL injection and malicious code
+  /// Allows: Letters, numbers, spaces, hyphens, underscores, dots
+  bool _isValidInput(String input) {
+    if (input.isEmpty) return true; // Empty is handled elsewhere
+    
+    final inputLower = input.toLowerCase();
+    
+    // SQL injection keywords
+    final sqlKeywords = [
+      'select', 'insert', 'update', 'delete', 'drop', 'create',
+      'alter', 'exec', 'execute', 'union', '--', 'xp_', 'sp_',
+      'script', 'javascript', 'onerror', 'onclick'
+    ];
+    
+    for (final keyword in sqlKeywords) {
+      if (inputLower.contains(keyword)) return false;
+    }
+    
+    // Dangerous characters
+    final dangerousChars = ['\'', '"', ';', '\\', '<', '>', '`', '{', '}', '[', ']', '(', ')'];
+    for (final char in dangerousChars) {
+      if (input.contains(char)) return false;
+    }
+    
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,7 +72,90 @@ class _FeedbackScreenState extends State<FeedbackScreen>
   }
 
   Future<void> _submitFeedback() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      // Show error dialog for missing required fields
+      List<String> missingFields = [];
+      
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final message = _messageController.text.trim();
+      
+      if (name.isEmpty) missingFields.add('Your Name');
+      if (email.isEmpty) missingFields.add('Email');
+      if (message.isEmpty) missingFields.add('Your Message');
+      
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              '⚠️ Missing Required Fields',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Please fill in all required fields:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                ...missingFields.map((field) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        field,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fix Fields', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final message = _messageController.text.trim();
+
+    // Validate input for malicious code
+    if (!_isValidInput(name) || !_isValidInput(message)) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Invalid Input'),
+            content: const Text('Your input contains invalid characters or SQL keywords. Please remove any special characters or suspicious content.'),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => isSubmitting = true);
 
@@ -55,14 +165,14 @@ class _FeedbackScreenState extends State<FeedbackScreen>
       final time = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
       
       // Generate document ID as {date}_{email}
-      final docId = '${date}_${_emailController.text.trim()}';
+      final docId = '${date}_${email}';
 
       final fbModel = feedback_model.Feedback(
         id: docId,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        name: name,
+        email: email,
         feedbackType: _feedbackType,
-        message: _messageController.text.trim(),
+        message: message,
         date: date,
         time: time,
       );

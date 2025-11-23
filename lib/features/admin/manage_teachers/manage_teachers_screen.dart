@@ -226,6 +226,44 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     super.dispose();
   }
 
+  /// Validates input to prevent SQL injection and malicious code
+  /// Allows: Letters, numbers, spaces, hyphens, underscores, dots
+  bool _isValidInput(String input) {
+    if (input.isEmpty) return true; // Empty is handled elsewhere
+    
+    final inputLower = input.toLowerCase();
+    
+    // SQL injection keywords
+    final sqlKeywords = [
+      'select', 'insert', 'update', 'delete', 'drop', 'create',
+      'alter', 'exec', 'execute', 'union', '--', 'xp_', 'sp_',
+      'script', 'javascript', 'onerror', 'onclick'
+    ];
+    
+    for (final keyword in sqlKeywords) {
+      if (inputLower.contains(keyword)) return false;
+    }
+    
+    // Dangerous characters
+    final dangerousChars = ['\'', '"', ';', '\\', '<', '>', '`', '{', '}', '[', ']', '(', ')'];
+    for (final char in dangerousChars) {
+      if (input.contains(char)) return false;
+    }
+    
+    return true;
+  }
+
+  /// Validates email format
+  bool _isValidEmail(String email) {
+    if (email.isEmpty) return false;
+    
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    );
+    
+    return emailRegex.hasMatch(email);
+  }
+
   void _showTeacherForm({Teacher? teacher}) {
     final nameController = TextEditingController(text: teacher?.name ?? '');
     final emailController = TextEditingController(text: teacher?.email ?? '');
@@ -506,12 +544,201 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                               showEmailError ||
                               showRoleError ||
                               showInitialError) {
+                        // Show error dialog if any required field is empty
+                        List<String> missingFields = [];
+                        if (showNameError) missingFields.add('Full Name');
+                        if (showEmailError) missingFields.add('Email');
+                        if (showRoleError) missingFields.add('Role');
+                        if (showInitialError) missingFields.add('Initial');
+
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => AlertDialog(
+                              title: const Text(
+                                '⚠️ Missing Required Fields',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Please fill in all required fields:',
+                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...missingFields.map((field) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          field,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                ],
+                              ),
+                              actions: [
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.teal,
+                                  ),
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Fix Fields', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                         return;
                       }
 
                       setModalState(() => isLoading = true);
 
                       try {
+                        // Validate input for malicious content
+                        if (!_isValidInput(name) || !_isValidInput(email) || 
+                            !_isValidInput(role) || !_isValidInput(initial)) {
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text(
+                                  'Invalid Input',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                                content: const Text(
+                                  'Input contains invalid characters or potentially harmful content.\n\n'
+                                  'Allowed characters: Letters, numbers, spaces, hyphens, underscores, dots, and @ for email only.',
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          setModalState(() => isLoading = false);
+                          return;
+                        }
+
+                        // Validate email format
+                        if (!_isValidEmail(email)) {
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text(
+                                  'Invalid Email',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                                content: const Text(
+                                  'Please enter a valid email address.\n\n'
+                                  'Example: teacher@daffodil.edu.bd',
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          setModalState(() => isLoading = false);
+                          return;
+                        }
+
+                        // Check if name already exists (excluding current teacher when editing)
+                        final existingTeachers = await _teacherService.getAllTeachers();
+                        final nameTaken = existingTeachers.any((t) => 
+                          t.name.toLowerCase() == name.toLowerCase() && 
+                          (teacher == null || t.id != teacher.id)
+                        );
+                        final initialTaken = existingTeachers.any((t) => 
+                          t.id.toUpperCase() == initial && 
+                          (teacher == null || t.id != teacher.id)
+                        );
+
+                        if (nameTaken) {
+                          setModalState(() {
+                            showNameError = true;
+                          });
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text(
+                                  'Duplicate Teacher Name',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                                content: const Text(
+                                  'A teacher with this name already exists.\n\n'
+                                  'Please use a different name or edit the existing teacher.',
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          setModalState(() => isLoading = false);
+                          return;
+                        }
+
+                        if (initialTaken) {
+                          setModalState(() {
+                            showInitialError = true;
+                            initialErrorMessage = 'This initial is already taken';
+                          });
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text(
+                                  'Duplicate Teacher Initial',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                                content: Text(
+                                  'A teacher with initial "$initial" already exists.\n\n'
+                                  'Please use a different initial or edit the existing teacher.',
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          setModalState(() => isLoading = false);
+                          return;
+                        }
+
                         await _teacherService.addOrUpdateTeacher(
                           teacherInitial: initial,
                           name: name,

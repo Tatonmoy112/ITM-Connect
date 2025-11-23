@@ -27,6 +27,26 @@ class TeacherService {
     Future<void> deleteTeacher(String teacherInitial) async {
       await teachersCollection.doc(teacherInitial).delete();
     }
+
+    // Get all teachers (Future version)
+    Future<List<Teacher>> getAllTeachers() async {
+      final snapshot = await teachersCollection.get();
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Get teacherInitial: prefer Firestore field, fallback to doc.id
+        String teacherInitial = (data['teacherInitial'] ?? doc.id ?? '').toString().trim();
+        
+        return Teacher(
+          id: doc.id,
+          name: data['name'] ?? '',
+          email: data['email'] ?? '',
+          role: data['role'] ?? '',
+          imageUrl: data['imageUrl'] ?? '',
+          teacherInitial: teacherInitial,
+        );
+      }).toList();
+    }
   final CollectionReference teachersCollection =
       FirebaseFirestore.instance.collection('teachers');
 

@@ -37,6 +37,33 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     super.dispose();
   }
 
+  /// Validates input to prevent SQL injection and malicious code
+  /// Allows: Letters, numbers, spaces, hyphens, underscores, dots
+  bool _isValidInput(String input) {
+    if (input.isEmpty) return true; // Empty is handled elsewhere
+    
+    final inputLower = input.toLowerCase();
+    
+    // SQL injection keywords
+    final sqlKeywords = [
+      'select', 'insert', 'update', 'delete', 'drop', 'create',
+      'alter', 'exec', 'execute', 'union', '--', 'xp_', 'sp_',
+      'script', 'javascript', 'onerror', 'onclick'
+    ];
+    
+    for (final keyword in sqlKeywords) {
+      if (inputLower.contains(keyword)) return false;
+    }
+    
+    // Dangerous characters
+    final dangerousChars = ['\'', '"', ';', '\\', '<', '>', '`', '{', '}', '[', ']', '(', ')'];
+    for (final char in dangerousChars) {
+      if (input.contains(char)) return false;
+    }
+    
+    return true;
+  }
+
   void _showNoticeForm({Notice? existingNotice}) {
     final titleController = TextEditingController(text: existingNotice?.title ?? '');
     final bodyController = TextEditingController(text: existingNotice?.body ?? '');
@@ -149,17 +176,37 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Date
-                          TextField(
-                            controller: dateController,
-                            keyboardType: TextInputType.datetime,
-                            decoration: InputDecoration(
-                              labelText: 'Date (YYYY-MM-DD)',
-                              prefixIcon: const Icon(Icons.calendar_today),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              errorText: showDateError ? 'Required' : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          // Date - with Date Picker
+                          GestureDetector(
+                            onTap: () async {
+                              final selectedDate = await showDatePicker(
+                                context: context,
+                                initialDate: dateController.text.isNotEmpty
+                                    ? DateTime.parse(dateController.text)
+                                    : DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+                              if (selectedDate != null) {
+                                final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                                dateController.text = formattedDate;
+                                setModalState(() {});
+                              }
+                            },
+                            child: TextField(
+                              controller: dateController,
+                              enabled: false,
+                              decoration: InputDecoration(
+                                labelText: 'Date (YYYY-MM-DD)',
+                                prefixIcon: const Icon(Icons.calendar_today),
+                                suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.teal),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                errorText: showDateError ? 'Required' : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -180,8 +227,8 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                               const SizedBox(height: 8),
                               if (!hasAttachment)
                                 ElevatedButton.icon(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  label: const Text('Add Attachment'),
+                                  icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+                                  label: const Text('Add Attachment', style: TextStyle(color: Colors.white)),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue,
                                   ),
@@ -267,6 +314,78 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                                 });
 
                                 if (showTitleError || showBodyError || showDateError) {
+                                  // Show error dialog if any required field is empty
+                                  List<String> missingFields = [];
+                                  if (showTitleError) missingFields.add('Title');
+                                  if (showBodyError) missingFields.add('Body');
+                                  if (showDateError) missingFields.add('Date');
+
+                                  if (mounted) {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text(
+                                          '⚠️ Missing Required Fields',
+                                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Please fill in all required fields:',
+                                              style: TextStyle(fontWeight: FontWeight.w600),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            ...missingFields.map((field) => Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 4),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    field,
+                                                    style: const TextStyle(fontSize: 14),
+                                                  ),
+                                                ],
+                                              ),
+                                            )),
+                                          ],
+                                        ),
+                                        actions: [
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.teal,
+                                            ),
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text('Fix Fields', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+
+                                // Validate input for malicious code
+                                if (!_isValidInput(title) || !_isValidInput(body)) {
+                                  if (mounted) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Invalid Input'),
+                                        content: const Text('Input contains invalid characters or SQL keywords. Please use only letters, numbers, spaces, hyphens, underscores, and dots.'),
+                                        actions: [
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
                                   return;
                                 }
 

@@ -197,6 +197,33 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     return '$startFormatted - $endFormatted';
   }
 
+  /// Validates input to prevent SQL injection and malicious code
+  /// Allows: Letters, numbers, spaces, hyphens, underscores, dots
+  bool _isValidInput(String input) {
+    if (input.isEmpty) return true; // Empty is handled elsewhere
+    
+    final inputLower = input.toLowerCase();
+    
+    // SQL injection keywords
+    final sqlKeywords = [
+      'select', 'insert', 'update', 'delete', 'drop', 'create',
+      'alter', 'exec', 'execute', 'union', '--', 'xp_', 'sp_',
+      'script', 'javascript', 'onerror', 'onclick'
+    ];
+    
+    for (final keyword in sqlKeywords) {
+      if (inputLower.contains(keyword)) return false;
+    }
+    
+    // Dangerous characters
+    final dangerousChars = ['\'', '"', ';', '\\', '<', '>', '`', '{', '}', '[', ']', '(', ')'];
+    for (final char in dangerousChars) {
+      if (input.contains(char)) return false;
+    }
+    
+    return true;
+  }
+
   void _showRoutineForm({Map<String, String>? routine, int? index}) {
     // New implementation: save to Firestore under document id: {batch}_{day}
     final courseName = TextEditingController(text: routine?['courseName']);
@@ -213,7 +240,6 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     bool showRoomError = false;
     bool showTimeError = false;
     bool isLoading = false;
-    String? timeErrorMessage;  // Error message for time field
 
     showDialog(
       context: context,
@@ -424,6 +450,83 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                                       showTeacherInitialError ||
                                       showRoomError ||
                                       showTimeError) {
+                                    // Show error dialog if any required field is empty
+                                    List<String> missingFields = [];
+                                    if (showCourseNameError) missingFields.add('Course Name');
+                                    if (showCourseCodeError) missingFields.add('Course Code');
+                                    if (showTeacherError) missingFields.add('Teacher Name');
+                                    if (showTeacherInitialError) missingFields.add('Teacher Initial');
+                                    if (showRoomError) missingFields.add('Room Number');
+                                    if (showTimeError) missingFields.add('Time');
+
+                                    if (mounted) {
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text(
+                                            '⚠️ Missing Required Fields',
+                                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                          ),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Please fill in all required fields:',
+                                                style: TextStyle(fontWeight: FontWeight.w600),
+                                              ),
+                                              const SizedBox(height: 12),
+                                              ...missingFields.map((field) => Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      field,
+                                                      style: const TextStyle(fontSize: 14),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )),
+                                            ],
+                                          ),
+                                          actions: [
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.teal,
+                                              ),
+                                              onPressed: () => Navigator.pop(context),
+                                              child: const Text('Fix Fields', style: TextStyle(color: Colors.white)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+
+                                  // Validate input for malicious code
+                                  if (!_isValidInput(cName) || !_isValidInput(cCode) || 
+                                      !_isValidInput(tName) || !_isValidInput(tInitial) || 
+                                      !_isValidInput(rRoom)) {
+                                    if (mounted) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Invalid Input'),
+                                          content: const Text('Input contains invalid characters or SQL keywords. Please use only letters, numbers, spaces, hyphens, underscores, and dots.'),
+                                          actions: [
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                              onPressed: () => Navigator.pop(context),
+                                              child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
                                     return;
                                   }
 
@@ -469,6 +572,42 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                                       return;
                                     }
 
+                                    // Check if this exact class (same time, course code) already exists for this batch/day (prevent duplicates)
+                                    for (int i = 0; i < existingClasses.length; i++) {
+                                      final existingClass = existingClasses[i];
+                                      
+                                      // When adding new class (routine == null), check all existing classes
+                                      // When editing (routine != null), skip checking itself (at index position)
+                                      if (routine == null || i != index) {
+                                        final existingTimeRange = _parseTimeRange(existingClass.time);
+                                        
+                                        if (existingTimeRange != null && _timesOverlap(newTimeRange, existingTimeRange)) {
+                                          if (mounted) {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('Class Already Exists'),
+                                                content: Text(
+                                                  'A class with overlapping time (${existingClass.time}) already exists for batch $selectedBatch on $selectedDay.\n\n'
+                                                  'Course: ${existingClass.courseName}\n'
+                                                  'Teacher: ${existingClass.teacherInitial}',
+                                                ),
+                                                actions: [
+                                                  ElevatedButton(
+                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: const Text('Understood', style: TextStyle(color: Colors.white)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                          setModalState(() => isLoading = false);
+                                          return;
+                                        }
+                                      }
+                                    }
+
                                     // Check if this teacher has any time conflicts within this routine
                                     for (int i = 0; i < existingClasses.length; i++) {
                                       final existingClass = existingClasses[i];
@@ -482,7 +621,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                                             showDialog(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                title: const Text('Time Conflict Detected'),
+                                                title: const Text('Teacher Time Conflict'),
                                                 content: Text(
                                                   '${newClass.teacherInitial} already has a class from ${existingClass.time} on this day.',
                                                 ),
