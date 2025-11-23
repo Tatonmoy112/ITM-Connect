@@ -53,6 +53,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.13.1"
 
 flutter:
   uses-material-design: true
@@ -60,3 +61,9 @@ flutter:
   assets:
     - assets/images/
     - assets/animations/intro.json
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/ITM_Connect_Logo_.jpg"
+  min_sdk_android: 21
