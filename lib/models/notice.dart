@@ -3,12 +3,14 @@ class Notice {
   final String title;
   final String body;
   final String date; // YYYY-MM-DD
+  final String? attachment; // Optional attachment URL
 
   Notice({
     required this.id,
     required this.title,
     required this.body,
     required this.date,
+    this.attachment,
   });
 
   Map<String, dynamic> toMap() {
@@ -16,6 +18,7 @@ class Notice {
       'title': title,
       'body': body,
       'date': date,
+      'attachment': attachment,
     };
   }
 
@@ -26,6 +29,7 @@ class Notice {
       title: m['title'] ?? '',
       body: m['body'] ?? '',
       date: m['date'] ?? '',
+      attachment: m['attachment'],
     );
   }
 }

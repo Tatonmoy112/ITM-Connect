@@ -41,6 +41,7 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     final titleController = TextEditingController(text: existingNotice?.title ?? '');
     final bodyController = TextEditingController(text: existingNotice?.body ?? '');
     final dateController = TextEditingController(text: existingNotice?.date ?? '');
+    final attachmentController = TextEditingController(text: existingNotice?.attachment ?? '');
 
     String _makeDocId(String date, String title) {
       final t = title.replaceAll(' ', '');
@@ -52,6 +53,7 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
     bool showBodyError = false;
     bool showDateError = false;
     bool isLoading = false;
+    bool hasAttachment = existingNotice?.attachment != null && existingNotice!.attachment!.isNotEmpty;
 
     showDialog(
       context: context,
@@ -160,6 +162,68 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          // Attachment Section
+                          Divider(color: Colors.grey.shade300, height: 1),
+                          const SizedBox(height: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Attachment (Optional)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (!hasAttachment)
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  label: const Text('Add Attachment'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                  ),
+                                  onPressed: () {
+                                    setModalState(() => hasAttachment = true);
+                                  },
+                                )
+                              else
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextField(
+                                      controller: attachmentController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Attachment URL',
+                                        prefixIcon: const Icon(Icons.attachment),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(Icons.close, color: Colors.red),
+                                          onPressed: () {
+                                            attachmentController.clear();
+                                            setModalState(() => hasAttachment = false);
+                                          },
+                                        ),
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        hintText: 'https://example.com/file.pdf',
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Enter the URL of the attachment (PDF, image, document, etc.)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -194,6 +258,7 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                                 final title = titleController.text.trim();
                                 final body = bodyController.text.trim();
                                 final date = dateController.text.trim();
+                                final attachment = attachmentController.text.trim().isEmpty ? null : attachmentController.text.trim();
 
                                 setModalState(() {
                                   showTitleError = title.isEmpty;
@@ -210,7 +275,13 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                                 final newId = _makeDocId(date, title);
 
                                 try {
-                                  final newNotice = Notice(id: newId, title: title, body: body, date: date);
+                                  final newNotice = Notice(
+                                    id: newId,
+                                    title: title,
+                                    body: body,
+                                    date: date,
+                                    attachment: attachment,
+                                  );
                                   await _noticeService.setNotice(newNotice);
 
                                   // if editing and id changed, delete old doc
@@ -371,6 +442,41 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // Attachment Display
+                if (notice.attachment != null && notice.attachment!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.attachment_rounded,
+                          color: Colors.blue,
+                          size: isMobile ? 18 : 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Attachment available',
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 13,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

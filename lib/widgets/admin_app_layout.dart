@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
 class AdminAppLayout extends StatefulWidget {
   final bool showAppBar;
@@ -87,25 +88,29 @@ class _AdminAppLayoutState extends State<AdminAppLayout> with SingleTickerProvid
               builder: (context, constraints) {
                 final isSmallScreen = constraints.maxWidth < 360;
                 final isMediumScreen = constraints.maxWidth >= 360 && constraints.maxWidth < 600;
-
+                
+                late EdgeInsets itemPadding;
                 late double iconSize;
                 late double fontSize;
                 late double navBarHeight;
-
+                
                 if (isSmallScreen) {
+                  itemPadding = const EdgeInsets.symmetric(vertical: 8, horizontal: 8);
                   iconSize = 22.0;
                   fontSize = 9.0;
                   navBarHeight = 70;
                 } else if (isMediumScreen) {
-                  iconSize = 24.0;
+                  itemPadding = const EdgeInsets.symmetric(vertical: 12, horizontal: 12);
+                  iconSize = 26.0;
                   fontSize = 11.0;
                   navBarHeight = 75;
                 } else {
+                  itemPadding = const EdgeInsets.symmetric(vertical: 16, horizontal: 20);
                   iconSize = 28.0;
                   fontSize = 12.0;
                   navBarHeight = 85;
                 }
-
+                
                 return Container(
                   height: navBarHeight,
                   decoration: BoxDecoration(
@@ -118,42 +123,61 @@ class _AdminAppLayoutState extends State<AdminAppLayout> with SingleTickerProvid
                       ),
                     ],
                   ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                    child: BottomNavigationBar(
-                      currentIndex: widget.currentIndex >= 0 ? widget.currentIndex : 0,
-                      onTap: widget.onBottomNavTap,
-                      selectedItemColor: const Color(0xFF185a9d),
-                      unselectedItemColor: Colors.grey.shade500,
-                      backgroundColor: Colors.white,
-                      elevation: 0,
-                      type: BottomNavigationBarType.fixed,
-                      selectedLabelStyle: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w600,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: SalomonBottomBar(
+                        currentIndex: widget.currentIndex,
+                        onTap: widget.onBottomNavTap,
+                        itemPadding: itemPadding,
+                        backgroundColor: Colors.white,
+                        items: [
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.person_rounded, size: iconSize),
+                            title: Text("Faculty", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.notifications_rounded, size: iconSize),
+                            title: Text("Notices", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF43cea2),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF185a9d), Color(0xFF43cea2)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF43cea2).withOpacity(0.25),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                              child: Icon(Icons.calendar_month_rounded, color: Colors.white, size: isSmallScreen ? 24.0 : 28.0),
+                            ),
+                            title: Text("Routines", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                          SalomonBottomBarItem(
+                            icon: Icon(Icons.feedback_rounded, size: iconSize),
+                            title: Text("Feedback", style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                            selectedColor: const Color(0xFF185a9d),
+                            unselectedColor: Colors.grey.shade500,
+                          ),
+                        ],
                       ),
-                      unselectedLabelStyle: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.normal,
-                      ),
-                      items: [
-                        BottomNavigationBarItem(
-                          icon: Icon(Icons.person_rounded, size: iconSize),
-                          label: 'Teachers',
-                        ),
-                        BottomNavigationBarItem(
-                          icon: Icon(Icons.notifications_rounded, size: iconSize),
-                          label: 'Notices',
-                        ),
-                        BottomNavigationBarItem(
-                          icon: Icon(Icons.calendar_month_rounded, size: iconSize),
-                          label: 'Routines',
-                        ),
-                        BottomNavigationBarItem(
-                          icon: Icon(Icons.feedback_rounded, size: iconSize),
-                          label: 'Feedback',
-                        ),
-                      ],
                     ),
                   ),
                 );

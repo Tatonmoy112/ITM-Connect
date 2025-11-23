@@ -126,77 +126,80 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 28),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.22),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.teal.withOpacity(0.18)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FadeTransition(
-                    opacity: _cardController,
-                    child: Text(
-                      'Information Technology & Management',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                        color: Colors.teal.shade900,
-                        shadows: [
-                          Shadow(
-                            color: Colors.tealAccent.withOpacity(0.18),
-                            blurRadius: 8,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 550),
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 28),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.22),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.teal.withOpacity(0.18)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
+                      opacity: _cardController,
+                      child: Text(
+                        'Information Technology & Management',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                          color: Colors.teal.shade900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.tealAccent.withOpacity(0.18),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    FadeTransition(
+                      opacity: _cardController,
+                      child: Text(
+                        'One place for ITM information',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    FadeTransition(
+                      opacity: _cardController,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.verified, color: Colors.teal.shade400, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Empowering Students',
+                            style: TextStyle(
+                              color: Colors.teal.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  FadeTransition(
-                    opacity: _cardController,
-                    child: Text(
-                      'One place for ITM information',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FadeTransition(
-                    opacity: _cardController,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.verified, color: Colors.teal.shade400, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Empowering Students',
-                          style: TextStyle(
-                            color: Colors.teal.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
