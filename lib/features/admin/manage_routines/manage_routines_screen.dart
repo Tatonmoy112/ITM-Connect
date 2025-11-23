@@ -20,6 +20,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
   String selectedDay = 'Sunday';
   String selectedBatch = '';  // No default batch selection
+  bool showDeleteBatchSection = false;  // Show/hide delete batch section
 
   final RoutineService _routineService = RoutineService();
 
@@ -961,24 +962,53 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                               stream: _routineService.streamAllBatches(),
                               builder: (context, snapshot) {
                                 final batchList = snapshot.data ?? [];
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    underline: const SizedBox(),
-                                    value: batchList.contains(selectedBatch) ? selectedBatch : null,
-                                    hint: const Text('Select batch'),
-                                    onChanged: (val) {
-                                      if (val == null) return;
-                                      setState(() => selectedBatch = val);
-                                    },
-                                    items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                                  ),
+                                return Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: DropdownButton<String>(
+                                        isExpanded: true,
+                                        underline: const SizedBox(),
+                                        value: batchList.contains(selectedBatch) ? selectedBatch : null,
+                                        hint: const Text('Select batch'),
+                                        onChanged: (val) {
+                                          if (val == null) return;
+                                          setState(() => selectedBatch = val);
+                                        },
+                                        items: batchList.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                                      ),
+                                    ),
+                                    // Clear Batch Button - Show only when batch is selected
+                                    if (selectedBatch.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 40,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            setState(() {
+                                              selectedBatch = '';
+                                              showDeleteBatchSection = false;
+                                            });
+                                          },
+                                          icon: const Icon(Icons.clear, size: 18),
+                                          label: const Text('Clear Batch'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.red.shade600,
+                                            side: BorderSide(color: Colors.red.shade400),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 );
                               },
                             ),
@@ -999,181 +1029,171 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Manage Batches',
-                        style: TextStyle(
-                          fontSize: headerFontSize - 4,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      // Show entire Manage Batches section only when no batch is selected
+                      if (selectedBatch.isEmpty) ...[
+                        Text(
+                          'Manage Batches',
+                          style: TextStyle(
+                            fontSize: headerFontSize - 4,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Create Batch Section - Always on one line
+                        Row(
+                          children: [
+                            Flexible(
+                              flex: 3,
+                              child: TextField(
+                                controller: _batchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Enter new batch (e.g. 61st)',
+                                  prefixIcon: const Icon(Icons.add_circle_outline),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: contentPadding, vertical: contentPadding - 4),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                style: TextStyle(fontSize: subtitleFontSize),
+                              ),
+                            ),
+                            SizedBox(width: headerPadding),
+                            SizedBox(
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: _addBatch,
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('Create'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(horizontal: headerPadding + 4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Delete Batch Section Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                showDeleteBatchSection = !showDeleteBatchSection;
+                            });
+                          },
+                          icon: Icon(showDeleteBatchSection ? Icons.expand_less : Icons.expand_more, size: 20),
+                          label: Text(
+                            showDeleteBatchSection ? 'Hide Delete Batch' : 'Delete Batch',
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade400,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // Create Batch Section
-                      isMobile
-                          ? Column(
-                              children: [
-                                TextField(
-                                  controller: _batchController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter new batch (e.g. 61st)',
-                                    prefixIcon: const Icon(Icons.add_circle_outline),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: contentPadding, vertical: contentPadding - 4),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.grey.shade50,
-                                  ),
-                                  style: TextStyle(fontSize: subtitleFontSize),
+                      // Show delete batch options when section is expanded
+                      if (showDeleteBatchSection) ...[
+                        const SizedBox(height: 12),
+                        StreamBuilder<List<String>>(
+                          stream: _routineService.streamAllBatches(),
+                          builder: (context, snap) {
+                            final list = snap.data ?? [];
+                            if (list.isEmpty) {
+                              return Container(
+                                padding: EdgeInsets.all(contentPadding),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.orange.shade200),
                                 ),
-                                SizedBox(height: headerPadding),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 44,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _addBatch,
-                                    icon: Icon(Icons.add, size: isMobile ? 18 : 20),
-                                    label: Text(
-                                      'Create',
-                                      style: TextStyle(fontSize: subtitleFontSize),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.teal,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'No batches to delete',
+                                        style: TextStyle(
+                                          color: Colors.orange.shade700,
+                                          fontSize: subtitleFontSize,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Flexible(
-                                  flex: 3,
-                                  child: TextField(
-                                    controller: _batchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter new batch (e.g. 61st)',
-                                      prefixIcon: const Icon(Icons.add_circle_outline),
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: contentPadding, vertical: contentPadding - 4),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                              );
+                            }
+                            return Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: list.map((batch) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    border: Border.all(color: Colors.red.shade200, width: 2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.red.withOpacity(0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
-                                    ),
-                                    style: TextStyle(fontSize: subtitleFontSize + 1),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: headerPadding + 4),
-                                SizedBox(
-                                  height: 48,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _addBatch,
-                                    icon: const Icon(Icons.add, size: 20),
-                                    label: Text(
-                                      'Create',
-                                      style: TextStyle(fontSize: subtitleFontSize + 1),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.teal,
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.symmetric(horizontal: headerPadding + 8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.class_, color: Colors.red.shade600, size: 20),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        batch,
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                      const SizedBox(height: 16),
-                      // Show cards for batches from Firestore
-                      StreamBuilder<List<String>>(
-                        stream: _routineService.streamAllBatches(),
-                        builder: (context, snap) {
-                          final list = snap.data ?? [];
-                          if (list.isEmpty) {
-                            return Container(
-                              padding: EdgeInsets.all(contentPadding),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.orange.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'No batches created yet',
-                                      style: TextStyle(
-                                        color: Colors.orange.shade700,
-                                        fontSize: subtitleFontSize,
+                                      const SizedBox(width: 12),
+                                      InkWell(
+                                        onTap: () => _deleteBatch(batch),
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade600,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.delete,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ),
                                       ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return Wrap(
-                        spacing: isMobile ? 8 : 10,
-                        runSpacing: isMobile ? 8 : 10,
-                        children: list.map((batch) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 14, vertical: isMobile ? 6 : 8),
-                            decoration: BoxDecoration(
-                              color: Colors.teal,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.teal.withOpacity(0.2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.class_, color: Colors.white, size: isMobile ? 16 : 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  batch,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: isMobile ? 12 : 13,
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: () => _deleteBatch(batch),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ],
+                      ],
                     ],
                   ),
                 ),
@@ -1459,12 +1479,11 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         backgroundColor: selectedBatch.isEmpty ? Colors.grey.shade400 : Colors.teal.shade600,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Routine'),
         onPressed: selectedBatch.isEmpty ? null : () => _showRoutineForm(),
+        child: const Icon(Icons.add),
       ),
     );
   }

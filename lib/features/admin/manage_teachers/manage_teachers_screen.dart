@@ -1724,12 +1724,11 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
             curve: const Interval(0.8, 1.0, curve: Curves.elasticOut),
           ),
         ),
-        child: FloatingActionButton.extended(
+        child: FloatingActionButton(
           onPressed: () => _showTeacherForm(),
           backgroundColor: Colors.teal,
           foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: const Text('Add Teacher'),
+          child: const Icon(Icons.add),
         ),
       ),
     );

@@ -928,12 +928,11 @@ class _ManageNoticesScreenState extends State<ManageNoticesScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Notice'),
         onPressed: () => _showNoticeForm(),
+        child: const Icon(Icons.add),
       ),
     );
   }
