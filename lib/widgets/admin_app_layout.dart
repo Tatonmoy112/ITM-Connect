@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminAppLayout extends StatefulWidget {
   final bool showAppBar;
@@ -74,9 +75,49 @@ class _AdminAppLayoutState extends State<AdminAppLayout> with SingleTickerProvid
               actions: [
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.teal),
-                  onPressed: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/admin_login', (route) => false);
+                  onPressed: () async {
+                    // Show confirmation dialog
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Confirm Logout'),
+                          content: const Text('Are you sure you want to logout?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(dialogContext);
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.pop(dialogContext);
+                                // Sign out from Firebase
+                                try {
+                                  await FirebaseAuth.instance.signOut();
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Logout error: $e')),
+                                    );
+                                  }
+                                }
+                                // Navigate to user home screen
+                                if (context.mounted) {
+                                  Navigator.pushNamedAndRemoveUntil(
+                                      context, '/home', (route) => false);
+                                }
+                              },
+                              child: const Text(
+                                'Logout',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
                   },
                 ),
               ],

@@ -150,7 +150,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.teal),
             onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+              // Direct navigation to user home screen (no dialog needed on login page)
+              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
             },
           ),
         ],
