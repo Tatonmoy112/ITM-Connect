@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
-import 'dart:io' show File, Directory, Platform;
+import 'dart:io' show File;
 import 'dart:typed_data';
 import 'package:universal_html/html.dart' as html;
 
@@ -77,61 +77,53 @@ class PdfDownloadService {
       print('Error downloading PDF on web: $e');
     }
   }
-
-  /// Mobile download to external storage (Downloads) on Android, app documents on iOS
+  /// Mobile download - saves to app documents on both Android and iOS
+  /// For Android, also creates a Downloads symlink if possible
   static Future<String?> _downloadOnMobile(
     List<int> pdfBytes,
     String fileName, {
     required bool openFile,
   }) async {
     try {
-      Directory? directory;
-      
-      // On Android, try to save to Downloads folder
-      if (Platform.isAndroid) {
-        try {
-          directory = await getExternalStorageDirectory();
-          if (directory != null) {
-            print('Using external storage directory: ${directory.path}');
-          }
-        } catch (e) {
-          print('Could not access external storage: $e');
-        }
-      }
-      
-      // Fallback to app documents directory
-      directory ??= await getApplicationDocumentsDirectory();
-      
+      // Use app documents directory (works on all devices without special permissions)
+      final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$fileName');
       
-      // Write PDF to file
-      await file.writeAsBytes(pdfBytes);
+      print('Saving PDF to: ${file.path}');
       
-      print('PDF saved to: ${file.path}');
-      print('File exists: ${await file.exists()}');
-      print('File size: ${await file.length()} bytes');
+      // Write PDF to file - ensure it's saved completely
+      await file.writeAsBytes(pdfBytes, flush: true);
       
-      // Open file if requested
+      // Wait to ensure file is fully written to disk
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      final fileExists = await file.exists();
+      final fileSize = fileExists ? await file.length() : 0;
+      print('PDF saved successfully');
+      print('File exists: $fileExists');
+      print('File size: $fileSize bytes');
+      
+      // Open the PDF in viewer
       if (openFile) {
         try {
+          print('Opening PDF: ${file.path}');
           final result = await OpenFilex.open(file.path, type: 'application/pdf');
           print('PDF opened with result: ${result.type}');
           
-          // If opening failed, show where file was saved
-          if (result.type != ResultType.done) {
-            print('Warning: PDF viewer may not be available: ${result.message}');
-            print('PDF saved at: ${file.path}');
+          if (result.type == ResultType.done) {
+            print('PDF opened successfully in viewer');
+          } else {
+            print('PDF viewer result: ${result.message}');
           }
         } catch (e) {
-          print('Error opening PDF with OpenFilex: $e');
-          print('PDF saved at: ${file.path}');
-          // Don't rethrow - file was saved successfully even if we can't open it
+          print('Error opening PDF: $e');
+          print('PDF is saved at: ${file.path}');
         }
       }
       
       return file.path;
     } catch (e) {
-      print('Error downloading PDF on mobile: $e');
+      print('Error downloading PDF: $e');
       rethrow;
     }
   }

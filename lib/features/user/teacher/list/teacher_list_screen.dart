@@ -808,7 +808,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                 ],
                               ),
                             ),
-                          ).animate().fadeIn(duration: 800.ms, delay: Duration(milliseconds: 300 + (index * 100))).slideY(begin: 0.3, end: 0);
+                          );
                         },
                       ),
                     );
@@ -819,7 +819,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0);
   }
 
   Widget _buildDaySelector() {
