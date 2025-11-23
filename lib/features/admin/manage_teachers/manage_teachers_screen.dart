@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:universal_html/html.dart' as html;
 
 class ManageTeacherScreen extends StatefulWidget {
   const ManageTeacherScreen({super.key});
@@ -56,25 +58,138 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     Function setModalState,
   ) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
+      if (kIsWeb) {
+        // Web implementation using universal_html
+        final html.FileUploadInputElement uploadInput = html.FileUploadInputElement()
+          ..accept = '.jpg,.png'
+          ..click();
 
-      if (result != null && result.files.isNotEmpty) {
-        final imageFile = File(result.files.first.path!);
-        final uploadedUrl = await _uploadImageToImageBB(imageFile);
-        
-        if (uploadedUrl != null) {
-          setModalState(() {
-            imageUrlController.text = uploadedUrl;
-          });
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Image uploaded successfully')),
-            );
+        uploadInput.onChange.listen((e) async {
+          final files = uploadInput.files;
+          if (files == null || files.isEmpty) return;
+
+          final file = files[0];
+          final reader = html.FileReader();
+
+          // Validate file name
+          final fileName = file.name.toLowerCase();
+          if (!fileName.endsWith('.jpg') && !fileName.endsWith('.png')) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid format! Only .jpg and .png files are accepted.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+            return;
           }
+
+          reader.onLoad.listen((e) async {
+            final bytes = reader.result as List<int>;
+            await _uploadImageToImageBBWeb(bytes, file.name, imageUrlController, setModalState);
+          });
+
+          reader.readAsArrayBuffer(file);
+        });
+      } else {
+        // Mobile/Desktop implementation using image_picker
+        final ImagePicker picker = ImagePicker();
+        final XFile? pickedFile = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
+        );
+
+        if (pickedFile != null) {
+          final imageFile = File(pickedFile.path);
+          
+          // Validate file extension
+          final fileName = imageFile.path.toLowerCase();
+          if (!fileName.endsWith('.jpg') && !fileName.endsWith('.png')) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid format! Only .jpg and .png files are accepted.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+            return;
+          }
+
+          final uploadedUrl = await _uploadImageToImageBB(imageFile);
+          
+          if (uploadedUrl != null) {
+            setModalState(() {
+              imageUrlController.text = uploadedUrl;
+            });
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Image uploaded successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  /// Upload image bytes to ImageBB (for web)
+  Future<void> _uploadImageToImageBBWeb(
+    List<int> imageBytes,
+    String fileName,
+    TextEditingController imageUrlController,
+    Function setModalState,
+  ) async {
+    try {
+      final uri = Uri.parse('https://api.imgbb.com/1/upload');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['key'] = _imageBbApiKey
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            imageBytes,
+            filename: fileName,
+          ),
+        );
+
+      final response = await request.send();
+      final responseData = await response.stream.toBytes();
+      final responseString = String.fromCharCodes(responseData);
+      final jsonResponse = jsonDecode(responseString);
+
+      if (response.statusCode == 200 && jsonResponse['success'] == true) {
+        final uploadedUrl = jsonResponse['data']['url'];
+        setModalState(() {
+          imageUrlController.text = uploadedUrl;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image uploaded successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Upload failed: ${jsonResponse['error']['message']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -302,6 +417,16 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                                       'Pick Photo',
                                       style: TextStyle(color: Colors.white),
                                     ),
+                                  ),
+                                ),
+                                // Format info text
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Accepted formats: .jpg, .png',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
                                 // Delete Button (shown only if photo exists)

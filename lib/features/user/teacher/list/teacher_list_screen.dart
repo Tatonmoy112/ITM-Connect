@@ -120,9 +120,15 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       final pdf = pw.Document();
       final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
 
-      final image = pw.MemoryImage(
-        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
-      );
+      pw.MemoryImage? image;
+      try {
+        image = pw.MemoryImage(
+          (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+        );
+      } catch (e) {
+        print('Warning: Could not load logo image: $e');
+        // Continue without image if it fails
+      }
 
       final routineService = RoutineService();
       final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
@@ -196,7 +202,8 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(image, width: 80, height: 80),
+                if (image != null)
+                  pw.Image(image, width: 80, height: 80),
                 pw.SizedBox(height: 10),
                 pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
                 pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
@@ -271,10 +278,24 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       // Save PDF using cross-platform service and open it
       final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
       final pdfBytes = await pdf.save();
-      await PdfDownloadService.downloadAndOpenPdf(
-        pdfBytes: pdfBytes.toList(),
-        fileName: fileName,
-      );
+      
+      try {
+        await PdfDownloadService.downloadAndOpenPdf(
+          pdfBytes: pdfBytes.toList(),
+          fileName: fileName,
+        );
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       // Close loading dialog
       if (mounted) {

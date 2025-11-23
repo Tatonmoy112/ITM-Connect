@@ -75,9 +75,15 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
       final pdf = pw.Document();
       final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
 
-      final image = pw.MemoryImage(
-        (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
-      );
+      pw.MemoryImage? image;
+      try {
+        image = pw.MemoryImage(
+          (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+        );
+      } catch (e) {
+        print('Warning: Could not load logo image: $e');
+        // Continue without image if it fails
+      }
 
       // Fetch all routine data from Firebase first
       final Map<String, List<List<String>>> classesByDay = {};
@@ -105,7 +111,8 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(image, width: 100, height: 100),
+                if (image != null)
+                  pw.Image(image, width: 100, height: 100),
                 pw.SizedBox(height: 10),
                 pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
                 pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
@@ -167,10 +174,24 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
       
       // Save PDF using cross-platform service and open it
       final pdfBytes = await pdf.save();
-      await PdfDownloadService.downloadAndOpenPdf(
-        pdfBytes: pdfBytes.toList(),
-        fileName: fileName,
-      );
+      
+      try {
+        await PdfDownloadService.downloadAndOpenPdf(
+          pdfBytes: pdfBytes.toList(),
+          fileName: fileName,
+        );
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       // Close loading dialog
       if (mounted) {
@@ -184,7 +205,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
           builder: (context) => AlertDialog(
             title: const Text('✓ PDF Downloaded Successfully'),
             content: Text(
-              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
+              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB\n\nThe file has been saved to your device.',
               style: const TextStyle(fontSize: 14),
             ),
             actions: [
