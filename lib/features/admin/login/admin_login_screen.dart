@@ -17,6 +17,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  int _failedLoginAttempts = 0;
+  DateTime? _lockoutTime;
+  static const int _maxLoginAttempts = 5;
+  static const Duration _lockoutDuration = Duration(minutes: 15);
 
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
@@ -54,12 +58,80 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
     super.dispose();
   }
 
-  bool _isValidInput(String input) {
-    final pattern = RegExp(r'^[a-zA-Z0-9_]{4,20}$');
-    return pattern.hasMatch(input);
+  /// ✅ SECURITY: Comprehensive email validation (RFC 5322 simplified)
+  bool _isValidEmail(String email) {
+    if (email.isEmpty || email.length > 254) return false;
+    
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    );
+    return emailRegex.hasMatch(email);
+  }
+
+  /// ✅ SECURITY: Password strength validation
+  bool _isStrongPassword(String password) {
+    if (password.isEmpty) return false;
+    if (password.length < 6) return false;
+    return true;
+  }
+
+  /// ✅ SECURITY: Check for SQL injection attempts (for password only)
+  bool _isSuspiciousInput(String input) {
+    if (input.isEmpty) return false;
+    
+    final suspiciousPatterns = [
+      RegExp(r"('|(\\-\\-)|(;))", caseSensitive: false),  // SQL injection
+      RegExp(r"(select|insert|update|delete|drop|create|alter|exec|union)", caseSensitive: false),
+      RegExp(r"(<script|javascript:|onerror|onclick|onload)", caseSensitive: false),  // XSS
+      RegExp(r"(\\\x00|\\\x1a|\\\n|\\\r)", caseSensitive: false), // Null bytes
+    ];
+    
+    for (final pattern in suspiciousPatterns) {
+      if (pattern.hasMatch(input)) return true;
+    }
+    return false;
+  }
+
+  /// ✅ SECURITY: Check if account is locked due to failed attempts
+  bool _isAccountLocked() {
+    if (_lockoutTime == null) return false;
+    
+    final now = DateTime.now();
+    if (now.difference(_lockoutTime!).inSeconds < _lockoutDuration.inSeconds) {
+      return true;
+    } else {
+      // Reset lockout
+      _lockoutTime = null;
+      _failedLoginAttempts = 0;
+      return false;
+    }
+  }
+
+  /// ✅ SECURITY: Get remaining lockout time
+  int _getRemainingLockoutSeconds() {
+    if (_lockoutTime == null) return 0;
+    
+    final now = DateTime.now();
+    final elapsed = now.difference(_lockoutTime!).inSeconds;
+    final remaining = _lockoutDuration.inSeconds - elapsed;
+    return remaining > 0 ? remaining : 0;
   }
 
   void _handleLogin() async {
+    // ✅ SECURITY: Check if account is locked
+    if (_isAccountLocked()) {
+      final remainingSeconds = _getRemainingLockoutSeconds();
+      final minutes = (remainingSeconds / 60).ceil();
+      
+      if (mounted) {
+        setState(() {
+          _errorMessage = '❌ Too many failed attempts. Try again in $minutes minute(s).';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
@@ -70,11 +142,39 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
         final email = _emailController.text.trim().toLowerCase();
         final password = _passwordController.text;
 
+        // ✅ SECURITY: Validate email format
+        if (!_isValidEmail(email)) {
+          throw FirebaseAuthException(
+            code: 'invalid-email',
+            message: 'Invalid email format',
+          );
+        }
+
+        // ✅ SECURITY: Check for SQL injection / XSS attempts (password only)
+        if (_isSuspiciousInput(password)) {
+          throw FirebaseAuthException(
+            code: 'suspicious-input',
+            message: 'Invalid characters detected in password',
+          );
+        }
+
+        // ✅ SECURITY: Check password strength
+        if (!_isStrongPassword(password)) {
+          throw FirebaseAuthException(
+            code: 'weak-password',
+            message: 'Password must be at least 6 characters',
+          );
+        }
+
         // Firebase Authentication
         await _auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
+
+        // ✅ SECURITY: Reset failed login attempts on success
+        _failedLoginAttempts = 0;
+        _lockoutTime = null;
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -83,15 +183,29 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
           );
         }
       } on FirebaseAuthException catch (e) {
+        // ✅ SECURITY: Increment failed login attempts
+        _failedLoginAttempts++;
+        
+        if (_failedLoginAttempts >= _maxLoginAttempts) {
+          _lockoutTime = DateTime.now();
+        }
+
         String errorMsg = 'Login failed';
         if (e.code == 'user-not-found') {
-          errorMsg = 'Admin account not found.';
+          errorMsg = 'Invalid credentials. Please check your email.';
         } else if (e.code == 'wrong-password') {
-          errorMsg = 'Incorrect password.';
+          errorMsg = 'Invalid credentials. Please check your password.';
         } else if (e.code == 'invalid-email') {
           errorMsg = 'Invalid email format.';
         } else if (e.code == 'user-disabled') {
-          errorMsg = 'This account has been disabled.';
+          errorMsg = '⚠️ This account has been disabled for security reasons.';
+        } else if (e.code == 'too-many-requests') {
+          errorMsg = '❌ Too many login attempts. Please try again later.';
+          _lockoutTime = DateTime.now();
+        } else if (e.code == 'suspicious-input') {
+          errorMsg = '⚠️ ${e.message}';
+        } else if (e.code == 'weak-password') {
+          errorMsg = '⚠️ ${e.message}';
         }
 
         if (mounted) {
@@ -103,7 +217,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
       } catch (e) {
         if (mounted) {
           setState(() {
-            _errorMessage = 'An error occurred: ${e.toString()}';
+            // ✅ SECURITY: Don't expose full error details to user
+            _errorMessage = 'An error occurred. Please try again later.';
             _isLoading = false;
           });
         }
@@ -281,8 +396,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                     if (value == null || value.trim().isEmpty) {
                                       return 'Please enter email';
                                     }
-                                    if (!value.contains('@')) {
-                                      return 'Please enter a valid email';
+                                    if (!_isValidEmail(value.trim())) {
+                                      return 'Please enter a valid email address';
                                     }
                                     return null;
                                   },
@@ -334,8 +449,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                     if (value == null || value.isEmpty) {
                                       return 'Please enter password';
                                     }
-                                    if (!_isValidInput(value)) {
-                                      return 'Only letters, numbers, _ allowed.';
+                                    if (value.length < 6) {
+                                      return 'Password must be at least 6 characters';
                                     }
                                     return null;
                                   },
