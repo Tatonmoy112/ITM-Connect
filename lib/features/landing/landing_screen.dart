@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/features/admin/login/admin_login_screen.dart';
@@ -19,7 +18,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
   late final AnimationController _logoController;
   late final AnimationController _cardController;
   late final AnimationController _buttonController;
-  late final AnimationController _3dController;
 
   @override
   void initState() {
@@ -27,17 +25,17 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
 
     _bgController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1000),
     )..forward();
 
     _cardController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 800),
     );
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _cardController.forward();
@@ -45,16 +43,11 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
 
     _buttonController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 800),
     );
     Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) _buttonController.forward();
     });
-
-    _3dController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
   }
 
   @override
@@ -63,7 +56,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _logoController.dispose();
     _cardController.dispose();
     _buttonController.dispose();
-    _3dController.dispose();
     super.dispose();
   }
 
@@ -286,18 +278,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                 const SizedBox(height: 60),
                 Expanded(
                   child: Center(
-                    child: AnimatedBuilder(
-                      animation: _3dController,
-                      builder: (context, child) {
-                              final angle = math.sin(_3dController.value * math.pi * 2) * 0.18; // subtle rocking
-                              return Transform(
-                                transform: Matrix4.identity()
-                                  ..setEntry(3, 2, 0.001)
-                                  ..rotateY(angle),
-                          alignment: Alignment.center,
-                                child: child,
-                        );
-                      },
+                    child: RepaintBoundary(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [

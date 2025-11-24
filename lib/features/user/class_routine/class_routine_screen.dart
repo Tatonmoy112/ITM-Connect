@@ -74,15 +74,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
       final pdf = pw.Document();
       final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+      final normalStyle = pw.TextStyle(fontWeight: pw.FontWeight.normal);
 
-      pw.MemoryImage? image;
+      // Load DIU logo
+      pw.MemoryImage? diuLogo;
       try {
-        image = pw.MemoryImage(
-          (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+        diuLogo = pw.MemoryImage(
+          (await rootBundle.load('assets/images/DIU_logo.png')).buffer.asUint8List(),
         );
       } catch (e) {
-        print('Warning: Could not load logo image: $e');
-        // Continue without image if it fails
+        print('Warning: Could not load DIU logo from assets/images/DIU_logo.png: $e');
       }
 
       // Fetch all routine data from Firebase first
@@ -107,21 +108,63 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          header: (context) => pw.Center(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                if (image != null)
-                  pw.Image(image, width: 100, height: 100),
-                pw.SizedBox(height: 10),
-                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center),
-                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center),
-                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center),
-                pw.SizedBox(height: 20),
-                pw.Text('Class Routine for Batch $selectedBatch', style: boldStyle, textAlign: pw.TextAlign.center),
-                pw.SizedBox(height: 10),
-              ],
-            ),
+          margin: const pw.EdgeInsets.all(20),
+          header: (context) => pw.Column(
+            children: [
+              // Top right: Generated through ITM Connect
+              pw.Align(
+                alignment: pw.Alignment.topRight,
+                child: pw.Text(
+                  'Generated through ITM Connect',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                ),
+              ),
+              pw.SizedBox(height: 15),
+              
+              // DIU Logo
+              if (diuLogo != null)
+                pw.Align(
+                  alignment: pw.Alignment.center,
+                  child: pw.Image(diuLogo, width: 80, height: 80),
+                )
+              else
+                pw.Align(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    'DIU Logo',
+                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+                  ),
+                ),
+              pw.SizedBox(height: 12),
+              
+              // Department Information
+              pw.Center(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    pw.Text(
+                      'Department of Information Technology & Management',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Faculty of Science and Information Technology',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Daffodil International University',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 15),
+              pw.Divider(),
+            ],
           ),
           build: (context) {
             if (classesByDay.isEmpty) {
@@ -129,6 +172,40 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
             }
             
             final widgets = <pw.Widget>[];
+            
+            // Class Routine Title
+            widgets.add(
+              pw.Center(
+                child: pw.Text(
+                  'Class Routine for Batch $selectedBatch',
+                  style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline),
+                ),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 12));
+            
+            // Department Information Section
+            widgets.add(
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    children: [
+                      pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 11)),
+                      pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Row(
+                    children: [
+                      pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 11)),
+                      pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 15));
             
             // Create separate table for each day
             for (final day in days) {

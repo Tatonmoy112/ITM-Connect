@@ -105,11 +105,12 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
   /// Check if two time ranges overlap
   /// timeRange1 and timeRange2 are [startMinutes, endMinutes]
-  /// Check if a teacher has a time conflict across ALL routines (all batches and days)
+  /// Check if a teacher has a time conflict across ALL routines on the SAME DAY
   /// Returns a conflict message if found, null if no conflict
   Future<String?> _checkGlobalTimeConflict(
     String teacherInitial,
     String timeRange,
+    String day,  // The day to check conflicts for
     {String? excludeDocId}  // Document ID to exclude (for edit case)
   ) async {
     try {
@@ -127,6 +128,9 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
         
         // Skip the current routine being edited
         if (excludeDocId != null && routine.id == excludeDocId) continue;
+
+        // Only check routines for the same day
+        if (routine.day != day) continue;
 
         // Check each class in this routine
         for (final routineClass in routine.classes) {
@@ -646,6 +650,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                                     final globalConflictMsg = await _checkGlobalTimeConflict(
                                       newClass.teacherInitial,
                                       newClass.time,
+                                      selectedDay,  // Pass the day to only check conflicts on the same day
                                       excludeDocId: routine == null ? null : docId,
                                     );
 

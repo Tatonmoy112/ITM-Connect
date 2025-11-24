@@ -58,7 +58,10 @@ class PdfDownloadService {
       // Create a temporary URL for the blob
       final url = html.Url.createObjectUrlFromBlob(blob);
       
-      // Create an anchor element and trigger download
+      // Open PDF in new tab/window
+      html.window.open(url, '_blank');
+      
+      // Also create download link
       final anchor = html.AnchorElement(href: url)
         ..setAttribute('download', fileName)
         ..style.display = 'none';
@@ -72,9 +75,9 @@ class PdfDownloadService {
         html.Url.revokeObjectUrl(url);
       });
       
-      print('PDF download initiated on web: $fileName');
+      print('PDF opened and downloaded on web: $fileName');
     } catch (e) {
-      print('Error downloading PDF on web: $e');
+      print('Error opening/downloading PDF on web: $e');
     }
   }
   /// Mobile download - saves to app documents on both Android and iOS

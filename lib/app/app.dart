@@ -16,6 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ITM Connect',
       debugShowCheckedModeBanner: false,
+      showPerformanceOverlay: false,
       theme: ThemeData(
         colorSchemeSeed: Colors.green,
         useMaterial3: true,
@@ -29,6 +30,12 @@ class MyApp extends StatelessWidget {
         '/contact': (context) => const ContactUsScreen(),
         '/feedback': (context) => const FeedbackScreen(),
         '/admin-login': (context) => const AdminLoginScreen(), // <-- Add this route
+      },
+      builder: (context, home) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: home!,
+        );
       },
     );
   }

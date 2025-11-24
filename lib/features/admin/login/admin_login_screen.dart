@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itm_connect/features/admin/dashboard/admin_dashboard_screen.dart';
 
@@ -10,8 +9,7 @@ class AdminLoginScreen extends StatefulWidget {
   State<AdminLoginScreen> createState() => _AdminLoginScreenState();
 }
 
-class _AdminLoginScreenState extends State<AdminLoginScreen>
-    with SingleTickerProviderStateMixin {
+class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorMessage;
@@ -22,39 +20,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
   static const int _maxLoginAttempts = 5;
   static const Duration _lockoutDuration = Duration(minutes: 15);
 
-  late final AnimationController _animationController;
-  late final Animation<double> _fadeAnimation;
-  late final Animation<double> _scaleAnimation;
-
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOutBack,
-      ),
-    );
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 
@@ -227,16 +204,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
   }
 
   Widget buildAnimatedLogoIcon() {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: CircleAvatar(
-        radius: 30,
-        backgroundColor: Colors.white, // ✅ Soft white background
-        child: Icon(
-          Icons.school,
-          size: 32,
-          color: Colors.teal.shade700, // ✅ Teal color
-        ),
+    return CircleAvatar(
+      radius: 30,
+      backgroundColor: Colors.white, // ✅ Soft white background
+      child: Icon(
+        Icons.school,
+        size: 32,
+        color: Colors.teal.shade700, // ✅ Teal color
       ),
     );
   }
@@ -289,31 +263,29 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                 constraints: BoxConstraints(
                   maxWidth: screenWidth < 600 ? double.infinity : 500,
                 ),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Teal Header
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.teal,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(12),
-                              topRight: Radius.circular(12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Teal Header
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.teal,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
                             ),
                           ),
                           child: Row(
@@ -343,16 +315,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              ScaleTransition(
-                                scale: _scaleAnimation,
-                                child: CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: Colors.white.withOpacity(0.2),
-                                  child: const Icon(
-                                    Icons.school,
-                                    size: 28,
-                                    color: Colors.white,
-                                  ),
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                child: const Icon(
+                                  Icons.school,
+                                  size: 28,
+                                  color: Colors.white,
                                 ),
                               ),
                             ],
@@ -528,12 +497,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                       ],
                     ),
                   ),
-                ),
               ),
             ),
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0);
+    );
   }
 }

@@ -119,15 +119,16 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
       final pdf = pw.Document();
       final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+      final normalStyle = pw.TextStyle(fontWeight: pw.FontWeight.normal);
 
-      pw.MemoryImage? image;
+      // Load DIU logo
+      pw.MemoryImage? diuLogo;
       try {
-        image = pw.MemoryImage(
-          (await rootBundle.load('assets/images/Itm_logo.png')).buffer.asUint8List(),
+        diuLogo = pw.MemoryImage(
+          (await rootBundle.load('assets/images/DIU_logo.png')).buffer.asUint8List(),
         );
       } catch (e) {
-        print('Warning: Could not load logo image: $e');
-        // Continue without image if it fails
+        print('Warning: Could not load DIU logo from assets/images/DIU_logo.png: $e');
       }
 
       final routineService = RoutineService();
@@ -185,8 +186,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       
       if (fullWeekTableData.isEmpty) {
         if (mounted) {
-          Navigator.of(context).pop(); // Close loading dialog
-          
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No classes scheduled for this teacher.')),
           );
@@ -198,30 +198,107 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          header: (context) => pw.Center(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                if (image != null)
-                  pw.Image(image, width: 80, height: 80),
-                pw.SizedBox(height: 10),
-                pw.Text('Department of Information Technology and Management', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
-                pw.Text('Faculty of Science and Information Technology', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
-                pw.Text('Daffodil International University', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 10)),
-                pw.SizedBox(height: 15),
-                pw.Text('Teacher Routine Schedule', style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline)),
-                pw.SizedBox(height: 10),
-                pw.Text('Name: ${teacher.name}', style: boldStyle.copyWith(fontSize: 12)),
-                pw.Text('Email: ${teacher.email}', style: boldStyle.copyWith(fontSize: 11)),
-                pw.Text('Role: ${teacher.role}', style: boldStyle.copyWith(fontSize: 12)),
-                pw.SizedBox(height: 5),
-                pw.Text('Full Week Routine', style: boldStyle.copyWith(fontSize: 12)),
-                pw.SizedBox(height: 10),
-              ],
-            ),
+          margin: const pw.EdgeInsets.all(20),
+          header: (context) => pw.Column(
+            children: [
+              // Top right: Generated through ITM Connect
+              pw.Align(
+                alignment: pw.Alignment.topRight,
+                child: pw.Text(
+                  'Generated through ITM Connect',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                ),
+              ),
+              pw.SizedBox(height: 15),
+              
+              // DIU Logo
+              if (diuLogo != null)
+                pw.Align(
+                  alignment: pw.Alignment.center,
+                  child: pw.Image(diuLogo, width: 80, height: 80),
+                )
+              else
+                pw.Align(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    'DIU Logo',
+                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+                  ),
+                ),
+              pw.SizedBox(height: 12),
+              
+              // Department Information
+              pw.Center(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    pw.Text(
+                      'Department of Information Technology & Management',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Faculty of Science and Information Technology',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Daffodil International University',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 15),
+              pw.Divider(),
+            ],
           ),
           build: (context) {
             final widgets = <pw.Widget>[];
+            
+            // Teacher Full Week Routine Title
+            widgets.add(
+              pw.Center(
+                child: pw.Text(
+                  'Teacher Full Week Routine',
+                  style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline),
+                ),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 12));
+            
+            // Teacher Information Section
+            widgets.add(
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    children: [
+                      pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 11)),
+                      pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Row(
+                    children: [
+                      pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 11)),
+                      pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Row(
+                    children: [
+                      pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 11)),
+                      pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 11)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 15));
             
             // Group classes by day
             final Map<String, List<List<String>>> classesByDay = {};
@@ -230,7 +307,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               if (!classesByDay.containsKey(day)) {
                 classesByDay[day] = [];
               }
-              // Add row without day column (since we'll show it as header)
               classesByDay[day]!.add([row[1], row[2], row[3], row[4]]);
             }
             
@@ -244,18 +320,24 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(fullDay, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
-                      pw.SizedBox(height: 5),
+                      pw.Text(
+                        fullDay,
+                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
+                      ),
+                      pw.SizedBox(height: 6),
                       pw.Table.fromTextArray(
                         headers: ['Course', 'Time Slot', 'Room', 'Batch'],
                         data: dayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 9),
                         headerDecoration: const pw.BoxDecoration(
                           color: PdfColors.teal700,
                         ),
                         cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 9),
-                        border: pw.TableBorder.all(),
+                        cellStyle: const pw.TextStyle(fontSize: 8),
+                        border: pw.TableBorder.all(
+                          color: PdfColors.grey300,
+                          width: 0.5,
+                        ),
                         columnWidths: {
                           0: const pw.FlexColumnWidth(2.5),
                           1: const pw.FlexColumnWidth(1.8),
@@ -263,7 +345,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                           3: const pw.FlexColumnWidth(1),
                         },
                       ),
-                      pw.SizedBox(height: 15),
+                      pw.SizedBox(height: 14),
                     ],
                   ),
                 );
@@ -272,6 +354,16 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             
             return widgets;
           },
+          footer: (context) => pw.Column(
+            children: [
+              pw.Divider(),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Generated on: ${DateTime.now().toString().split('.')[0]}',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+              ),
+            ],
+          ),
         ),
       );
 
@@ -286,7 +378,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         );
       } catch (e) {
         if (mounted) {
-          Navigator.of(context).pop(); // Close loading dialog
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: ${e.toString()}'),
