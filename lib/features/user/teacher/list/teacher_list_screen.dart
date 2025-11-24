@@ -21,6 +21,42 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   final RoutineService _routineService = RoutineService();
   final TextEditingController _searchController = TextEditingController();
 
+  // Helper method to extract start time for sorting
+  String _extractStartTime(String timeRange) {
+    // Expects format like "8:30 AM - 10:00 AM"
+    final parts = timeRange.split('-');
+    if (parts.isNotEmpty) {
+      final startTime = parts[0].trim();
+      // Convert to 24-hour format for proper sorting
+      return _convertTo24Hour(startTime);
+    }
+    return '00:00';
+  }
+
+  // Convert 12-hour to 24-hour format for sorting
+  String _convertTo24Hour(String time12) {
+    // Expects format like "8:30 AM" or "10:00 PM"
+    final parts = time12.trim().split(RegExp(r'\s+'));
+    if (parts.length < 2) return '00:00';
+    
+    final timePart = parts[0]; // "8:30" or "10:00"
+    final period = parts[1].toUpperCase(); // "AM" or "PM"
+    
+    final timeBits = timePart.split(':');
+    if (timeBits.length < 2) return '00:00';
+    
+    var hour = int.tryParse(timeBits[0]) ?? 0;
+    final minute = timeBits[1];
+    
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
+    }
+    
+    return '${hour.toString().padLeft(2, '0')}:$minute';
+  }
+
   // State
   int? expandedIndex;
   int? showRoutineIndex;
@@ -111,6 +147,22 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       'fri': 'Friday',
     };
     return dayMap[shortDay.toLowerCase().trim()] ?? shortDay;
+  }
+
+  bool _hasTeacherAnyClasses(Teacher teacher) {
+    final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
+    if (teacherInitials.isEmpty) return false;
+    
+    // Check if teacher has any classes for any day
+    for (final key in teacherRoutinesMap.keys) {
+      if (key.startsWith('$teacherInitials|')) {
+        final routines = teacherRoutinesMap[key];
+        if (routines != null && routines.isNotEmpty) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   String _getInitials(String name) {
@@ -302,40 +354,32 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(20),
+          margin: const pw.EdgeInsets.only(left: 15, right: 15, top: 12, bottom: 12),
           header: (context) => pw.Column(
             children: [
-              pw.Center(
-                child: pw.Text(
-                  'Teacher Full Week Routine',
-                  style: boldStyle.copyWith(fontSize: 18, decoration: pw.TextDecoration.underline),
-                ),
-              ),
-              pw.SizedBox(height: 20),
-              
               pw.Align(
                 alignment: pw.Alignment.topRight,
                 child: pw.Text(
                   'Generated through ITM Connect',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
                 ),
               ),
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
               
               if (diuLogo != null)
                 pw.Align(
                   alignment: pw.Alignment.center,
-                  child: pw.Image(diuLogo, width: 80, height: 80),
+                  child: pw.Image(diuLogo, width: 60, height: 60),
                 )
               else
                 pw.Align(
                   alignment: pw.Alignment.center,
                   child: pw.Text(
                     'DIU Logo',
-                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
                   ),
                 ),
-              pw.SizedBox(height: 12),
+              pw.SizedBox(height: 6),
               
               pw.Center(
                 child: pw.Column(
@@ -344,25 +388,33 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                     pw.Text(
                       'Department of Information Technology & Management',
                       textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.SizedBox(height: 3),
-                    pw.Text(
-                      'Faculty of Science and Information Technology',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 10),
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                     ),
                     pw.SizedBox(height: 2),
                     pw.Text(
+                      'Faculty of Science and Information Technology',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
+                    pw.SizedBox(height: 1),
+                    pw.Text(
                       'Daffodil International University',
                       textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 10),
+                      style: const pw.TextStyle(fontSize: 9),
                     ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 15),
-              pw.Divider(),
+              pw.SizedBox(height: 8),
+              
+              pw.Center(
+                child: pw.Text(
+                  'Teacher Full Week Routine',
+                  style: boldStyle.copyWith(fontSize: 14, decoration: pw.TextDecoration.underline),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 0.5),
             ],
           ),
           build: (context) {
@@ -375,31 +427,31 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                 ],
               ),
             );
-            widgets.add(pw.SizedBox(height: 15));
+            widgets.add(pw.SizedBox(height: 8));
             
             final Map<String, List<List<String>>> classesByDay = {};
             for (final row in fullWeekTableData) {
@@ -415,24 +467,33 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               final dayClasses = classesByDay[fullDay];
               
               if (dayClasses != null && dayClasses.isNotEmpty) {
+                // Re-sort the day classes by time before adding to PDF
+                final sortedDayClasses = List<List<String>>.from(dayClasses);
+                sortedDayClasses.sort((a, b) {
+                  // a[2] and b[2] contain the time slot
+                  final timeA = _extractStartTime(a[2]);
+                  final timeB = _extractStartTime(b[2]);
+                  return timeA.compareTo(timeB);
+                });
+                
                 widgets.add(
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
                         fullDay,
-                        style: boldStyle.copyWith(fontSize: 14, color: PdfColors.teal700),
+                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
                       ),
-                      pw.SizedBox(height: 6),
+                      pw.SizedBox(height: 3),
                       pw.Table.fromTextArray(
                         headers: ['Course', 'Time Slot', 'Room', 'Batch'],
-                        data: dayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 11),
+                        data: sortedDayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
                         headerDecoration: const pw.BoxDecoration(
                           color: PdfColors.teal700,
                         ),
                         cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 10),
+                        cellStyle: const pw.TextStyle(fontSize: 9),
                         border: pw.TableBorder.all(
                           color: PdfColors.grey300,
                           width: 0.5,
@@ -444,7 +505,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                           3: const pw.FlexColumnWidth(1),
                         },
                       ),
-                      pw.SizedBox(height: 14),
+                      pw.SizedBox(height: 8),
                     ],
                   ),
                 );
@@ -455,11 +516,11 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           },
           footer: (context) => pw.Column(
             children: [
-              pw.Divider(),
-              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 0.5),
+              pw.SizedBox(height: 3),
               pw.Text(
                 'Generated on: ${DateTime.now().toString().split('.')[0]}',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey),
               ),
             ],
           ),
@@ -530,6 +591,65 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Widget _buildTeacherActionButtons(Teacher teacher, int index, bool routineVisible, Color roleCategoryColor) {
+    final hasClasses = _hasTeacherAnyClasses(teacher);
+    
+    // If teacher has no classes, don't show any buttons
+    if (!hasClasses) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.schedule_rounded, size: 16),
+            label: Text(
+              routineVisible ? 'Hide' : 'Routine',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: roleCategoryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 2,
+            ),
+            onPressed: () {
+              setState(() {
+                showRoutineIndex = routineVisible ? null : index;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.download_rounded, size: 16),
+            label: const Text(
+              'PDF',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepOrange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 2,
+            ),
+            onPressed: () {
+              _generateTeacherPDF(teacher);
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -785,55 +905,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                         textAlign: TextAlign.center,
                                                       ),
                                                       const SizedBox(height: 20),
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: ElevatedButton.icon(
-                                                              icon: const Icon(Icons.schedule_rounded, size: 16),
-                                                              label: Text(
-                                                                routineVisible ? 'Hide' : 'Routine',
-                                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                                              ),
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: roleCategoryColor,
-                                                                foregroundColor: Colors.white,
-                                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                ),
-                                                                elevation: 2,
-                                                              ),
-                                                              onPressed: () {
-                                                                setState(() {
-                                                                  showRoutineIndex = routineVisible ? null : index;
-                                                                });
-                                                              },
-                                                            ),
-                                                          ),
-                                                          const SizedBox(width: 10),
-                                                          Expanded(
-                                                            child: ElevatedButton.icon(
-                                                              icon: const Icon(Icons.download_rounded, size: 16),
-                                                              label: const Text(
-                                                                'PDF',
-                                                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                                              ),
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.deepOrange,
-                                                                foregroundColor: Colors.white,
-                                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                ),
-                                                                elevation: 2,
-                                                              ),
-                                                              onPressed: () {
-                                                                _generateTeacherPDF(teacher);
-                                                              },
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
+                                                      _buildTeacherActionButtons(teacher, index, routineVisible, roleCategoryColor),
                                                     ],
                                                   )
                                                 : Row(
@@ -994,12 +1066,20 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       );
     }
 
+    // Sort routines by time
+    final sortedRoutines = List<RoutineClass>.from(routines);
+    sortedRoutines.sort((a, b) {
+      final timeA = _extractStartTime(a.time);
+      final timeB = _extractStartTime(b.time);
+      return timeA.compareTo(timeB);
+    });
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 400),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: routines.map((c) {
+          children: sortedRoutines.map((c) {
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -23,6 +23,42 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
   final List<String> days = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
   final RoutineService _routineService = RoutineService();
 
+  // Helper method to extract start time for sorting
+  String _extractStartTime(String timeRange) {
+    // Expects format like "8:30 AM - 10:00 AM"
+    final parts = timeRange.split('-');
+    if (parts.isNotEmpty) {
+      final startTime = parts[0].trim();
+      // Convert to 24-hour format for proper sorting
+      return _convertTo24Hour(startTime);
+    }
+    return '00:00';
+  }
+
+  // Convert 12-hour to 24-hour format for sorting
+  String _convertTo24Hour(String time12) {
+    // Expects format like "8:30 AM" or "10:00 PM"
+    final parts = time12.trim().split(RegExp(r'\s+'));
+    if (parts.length < 2) return '00:00';
+    
+    final timePart = parts[0]; // "8:30" or "10:00"
+    final period = parts[1].toUpperCase(); // "AM" or "PM"
+    
+    final timeBits = timePart.split(':');
+    if (timeBits.length < 2) return '00:00';
+    
+    var hour = int.tryParse(timeBits[0]) ?? 0;
+    final minute = timeBits[1];
+    
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
+    }
+    
+    return '${hour.toString().padLeft(2, '0')}:$minute';
+  }
+
   Future<void> _generateAndOpenFile() async {
     if (selectedBatch == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,8 +129,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
         final routine = await _routineService.getRoutine(routineId);
 
         if (routine != null && routine.classes.isNotEmpty) {
+          // Sort classes by time
+          final sortedClasses = List.from(routine.classes);
+          sortedClasses.sort((a, b) {
+            final timeA = _extractStartTime(a.time);
+            final timeB = _extractStartTime(b.time);
+            return timeA.compareTo(timeB);
+          });
+          
           classesByDay[day] = [];
-          for (final classItem in routine.classes) {
+          for (final classItem in sortedClasses) {
             classesByDay[day]!.add([
               '${classItem.courseName} (${classItem.courseCode})',
               classItem.time,
@@ -108,7 +152,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(20),
+          margin: const pw.EdgeInsets.only(left: 15, right: 15, top: 12, bottom: 12),
           header: (context) => pw.Column(
             children: [
               // Top right: Generated through ITM Connect
@@ -116,26 +160,26 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                 alignment: pw.Alignment.topRight,
                 child: pw.Text(
                   'Generated through ITM Connect',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
                 ),
               ),
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
               
               // DIU Logo
               if (diuLogo != null)
                 pw.Align(
                   alignment: pw.Alignment.center,
-                  child: pw.Image(diuLogo, width: 80, height: 80),
+                  child: pw.Image(diuLogo, width: 60, height: 60),
                 )
               else
                 pw.Align(
                   alignment: pw.Alignment.center,
                   child: pw.Text(
                     'DIU Logo',
-                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
+                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
                   ),
                 ),
-              pw.SizedBox(height: 12),
+              pw.SizedBox(height: 6),
               
               // Department Information
               pw.Center(
@@ -145,34 +189,34 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                     pw.Text(
                       'Department of Information Technology & Management',
                       textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.SizedBox(height: 3),
-                    pw.Text(
-                      'Faculty of Science and Information Technology',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 10),
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                     ),
                     pw.SizedBox(height: 2),
                     pw.Text(
+                      'Faculty of Science and Information Technology',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
+                    pw.SizedBox(height: 1),
+                    pw.Text(
                       'Daffodil International University',
                       textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 10),
+                      style: const pw.TextStyle(fontSize: 9),
                     ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
               
               // Class Routine Title - Below university text
               pw.Center(
                 child: pw.Text(
                   'Class Routine for Batch $selectedBatch',
-                  style: boldStyle.copyWith(fontSize: 18, decoration: pw.TextDecoration.underline),
+                  style: boldStyle.copyWith(fontSize: 14, decoration: pw.TextDecoration.underline),
                 ),
               ),
-              pw.SizedBox(height: 15),
-              pw.Divider(),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 0.5),
             ],
           ),
           build: (context) {
@@ -190,55 +234,64 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                   pw.Expanded(
                     child: pw.Row(
                       children: [
-                        pw.Text('Class Time: ', style: boldStyle.copyWith(fontSize: 13)),
-                        pw.Text('8:30 AM - 4:00 PM', style: normalStyle.copyWith(fontSize: 13)),
+                        pw.Text('Class Time: ', style: boldStyle.copyWith(fontSize: 11)),
+                        pw.Text('8:30 AM - 4:00 PM', style: normalStyle.copyWith(fontSize: 11)),
                       ],
                     ),
                   ),
                 ],
               ),
             );
-            widgets.add(pw.SizedBox(height: 15));
+            widgets.add(pw.SizedBox(height: 8));
             
             // Create separate table for each day
             for (final day in days) {
               final dayClasses = classesByDay[day];
               
               if (dayClasses != null && dayClasses.isNotEmpty) {
+                // Re-sort the day classes by time before adding to PDF
+                final sortedDayClasses = List<List<String>>.from(dayClasses);
+                sortedDayClasses.sort((a, b) {
+                  // a[1] and b[1] contain the time slot
+                  final timeA = _extractStartTime(a[1]);
+                  final timeB = _extractStartTime(b[1]);
+                  return timeA.compareTo(timeB);
+                });
+                
                 widgets.add(
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
                         day,
-                        style: boldStyle.copyWith(fontSize: 14, color: PdfColors.teal700),
+                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
                       ),
-                      pw.SizedBox(height: 6),
+                      pw.SizedBox(height: 3),
                       pw.Table.fromTextArray(
                         headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
-                        data: dayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 11),
+                        data: sortedDayClasses,
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
                         headerDecoration: const pw.BoxDecoration(
                           color: PdfColors.teal700,
                         ),
                         cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 10),
+                        cellStyle: const pw.TextStyle(fontSize: 9),
                         border: pw.TableBorder.all(
                           color: PdfColors.grey300,
                           width: 0.5,
@@ -250,7 +303,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                           3: const pw.FlexColumnWidth(1.2),
                         },
                       ),
-                      pw.SizedBox(height: 14),
+                      pw.SizedBox(height: 8),
                     ],
                   ),
                 );
@@ -261,11 +314,11 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
           },
           footer: (context) => pw.Column(
             children: [
-              pw.Divider(),
-              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 0.5),
+              pw.SizedBox(height: 3),
               pw.Text(
                 'Generated on: ${DateTime.now().toString().split('.')[0]}',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey),
               ),
             ],
           ),
@@ -626,8 +679,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                         );
                       }
 
+                      // Sort classes by time
+                      final sortedClasses = List.from(routine.classes);
+                      sortedClasses.sort((a, b) {
+                        final timeA = _extractStartTime(a.time);
+                        final timeB = _extractStartTime(b.time);
+                        return timeA.compareTo(timeB);
+                      });
+
                       return Column(
-                        children: routine.classes.mapIndexed((index, classItem) {
+                        children: sortedClasses.mapIndexed((index, classItem) {
                           return Animate(
                             effects: [
                               FadeEffect(duration: 300.ms, delay: (index * 100).ms),
