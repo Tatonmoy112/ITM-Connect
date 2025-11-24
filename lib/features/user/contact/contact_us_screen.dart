@@ -173,7 +173,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
   }
 
   Future<void> _launchWebsite() async {
-    final Uri websiteUri = Uri.parse('https://itm.daffodilvarsity.edu.bd');
+    final Uri websiteUri = Uri.parse('https://daffodilvarsity.edu.bd/department/itm');
     
     try {
       await launchUrl(
@@ -187,15 +187,14 @@ class _ContactUsScreenState extends State<ContactUsScreen>
 
   Future<void> _launchMaps() async {
     final Uri mapsUri = Uri.parse(
-      'geo:23.8103,90.3436?q=Daffodil+Smart+City,+Birulia,+Savar,+Dhaka',
+      'https://www.google.com/maps/search/Daffodil+International+University+Daffodil+Smart+City+Birulia+Savar+Dhaka',
     );
     
     try {
-      if (await canLaunchUrl(mapsUri)) {
-        await launchUrl(mapsUri);
-      } else {
-        _showSnackbar('Maps app not available');
-      }
+      await launchUrl(
+        mapsUri,
+        mode: LaunchMode.externalApplication,
+      );
     } catch (e) {
       _showSnackbar('Error launching maps: $e');
     }
@@ -250,8 +249,9 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                   ),
                   child: Column(
                     children: [
-                      // Teal Header Section
+                      // Teal Header Section - Same as Feedback Page
                       Container(
+                        width: double.infinity,
                         padding: EdgeInsets.all(headerPadding),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -265,81 +265,12 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                           ),
                         ),
                         child: isMobile
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Contact Us',
-                                              style: TextStyle(
-                                                fontSize: headerFontSize,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              'Get in touch - We\'re here to help',
-                                              style: TextStyle(
-                                                fontSize: subtitleFontSize,
-                                                color: Colors.white.withOpacity(0.9),
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.white.withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.contact_mail,
-                                        color: Colors.white,
-                                        size: iconSize,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.25),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.3),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.contact_mail,
-                                      color: Colors.white,
-                                      size: iconSize,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
+                            ? Padding(
+                                padding: EdgeInsets.all(headerPadding),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
@@ -353,7 +284,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
-                                          'Get in touch - We\'re here to help you',
+                                          'Get in touch - We\'re here to help',
                                           style: TextStyle(
                                             fontSize: subtitleFontSize,
                                             color: Colors.white.withOpacity(0.9),
@@ -362,8 +293,86 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
+                                    Positioned(
+                                      top: -headerPadding,
+                                      right: -headerPadding,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(0.3),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.contact_mail,
+                                          color: Colors.white,
+                                          size: iconSize,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Padding(
+                                padding: EdgeInsets.all(headerPadding),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Contact Us',
+                                                style: TextStyle(
+                                                  fontSize: headerFontSize,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'Get in touch - We\'re here to help you',
+                                                style: TextStyle(
+                                                  fontSize: subtitleFontSize,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Positioned(
+                                      top: -headerPadding,
+                                      right: -headerPadding,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(0.3),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.contact_mail,
+                                          color: Colors.white,
+                                          size: iconSize,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                       ),
                       // Contact Cards Section - New placement
@@ -397,7 +406,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                                 _buildProContactCard(
                                   icon: Icons.location_on_rounded,
                                   title: 'Address',
-                                  subtitle: 'Daffodil Smart City (DSC), Birulia, Savar, Dhaka-1216',
+                                  subtitle: 'Daffodil International University Daffodil Smart City (DSC), Birulia, Savar, Dhaka-1216',
                                   color: Colors.deepOrange,
                                   width: isMobile ? double.infinity : (isTablet ? 120.0 : 150.0),
                                   onTap: _launchMaps,
@@ -405,7 +414,7 @@ class _ContactUsScreenState extends State<ContactUsScreen>
                                 _buildProContactCard(
                                   icon: Icons.public_rounded,
                                   title: 'Website',
-                                  subtitle: 'itm.daffodilvarsity.edu.bd',
+                                  subtitle: 'daffodilvarsity.edu.bd/department/itm',
                                   color: Colors.blue,
                                   width: isMobile ? double.infinity : (isTablet ? 120.0 : 150.0),
                                   onTap: _launchWebsite,

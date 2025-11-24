@@ -163,6 +163,15 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                 ),
               ),
               pw.SizedBox(height: 15),
+              
+              // Class Routine Title - Below university text
+              pw.Center(
+                child: pw.Text(
+                  'Class Routine for Batch $selectedBatch',
+                  style: boldStyle.copyWith(fontSize: 18, decoration: pw.TextDecoration.underline),
+                ),
+              ),
+              pw.SizedBox(height: 15),
               pw.Divider(),
             ],
           ),
@@ -173,34 +182,34 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
             
             final widgets = <pw.Widget>[];
             
-            // Class Routine Title
+            // Batch Information Section - Single Line with Equal Spacing
             widgets.add(
-              pw.Center(
-                child: pw.Text(
-                  'Class Routine for Batch $selectedBatch',
-                  style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline),
-                ),
-              ),
-            );
-            widgets.add(pw.SizedBox(height: 12));
-            
-            // Department Information Section
-            widgets.add(
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Row(
-                    children: [
-                      pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 11)),
-                      pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 11)),
-                    ],
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
                   ),
-                  pw.SizedBox(height: 4),
-                  pw.Row(
-                    children: [
-                      pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 11)),
-                      pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 11)),
-                    ],
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Class Time: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text('8:30 AM - 4:00 PM', style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -216,26 +225,32 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(day, style: boldStyle.copyWith(fontSize: 13, color: PdfColors.teal700)),
-                      pw.SizedBox(height: 5),
+                      pw.Text(
+                        day,
+                        style: boldStyle.copyWith(fontSize: 14, color: PdfColors.teal700),
+                      ),
+                      pw.SizedBox(height: 6),
                       pw.Table.fromTextArray(
                         headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
                         data: dayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 11),
                         headerDecoration: const pw.BoxDecoration(
                           color: PdfColors.teal700,
                         ),
                         cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 9),
-                        border: pw.TableBorder.all(),
+                        cellStyle: const pw.TextStyle(fontSize: 10),
+                        border: pw.TableBorder.all(
+                          color: PdfColors.grey300,
+                          width: 0.5,
+                        ),
                         columnWidths: {
-                          0: const pw.FlexColumnWidth(3),
-                          1: const pw.FlexColumnWidth(2.5),
-                          2: const pw.FlexColumnWidth(1.5),
-                          3: const pw.FlexColumnWidth(1.5),
+                          0: const pw.FlexColumnWidth(2.5),
+                          1: const pw.FlexColumnWidth(1.8),
+                          2: const pw.FlexColumnWidth(1.2),
+                          3: const pw.FlexColumnWidth(1.2),
                         },
                       ),
-                      pw.SizedBox(height: 15),
+                      pw.SizedBox(height: 14),
                     ],
                   ),
                 );
@@ -244,6 +259,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
             
             return widgets;
           },
+          footer: (context) => pw.Column(
+            children: [
+              pw.Divider(),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Generated on: ${DateTime.now().toString().split('.')[0]}',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+              ),
+            ],
+          ),
         ),
       );
 

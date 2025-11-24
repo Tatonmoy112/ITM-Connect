@@ -221,7 +221,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                             const SizedBox(height: 16),
                             // Welcome message
                             Text(
-                              'Welcome to the Department of Information and Technology Management. We are committed to providing excellent education and nurturing the next generation of IT professionals with cutting-edge knowledge and practical skills.',
+                              'Welcome to the Department of Information Technology & Management. We are committed to providing excellent education and nurturing the next generation of IT professionals with cutting-edge knowledge and practical skills.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 13,
@@ -310,35 +310,167 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   
-                  // ============ FOOTER SECTION WITH SOCIAL ICONS ============
+                  // ============ QUICK STATS SECTION ============
+                  Text(
+                    'Department Stats',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2c3e50),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                     decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
                       gradient: LinearGradient(
                         colors: [
-                          Colors.teal.withOpacity(0.05),
-                          Colors.blue.withOpacity(0.05),
+                          const Color(0xFF185a9d).withOpacity(0.08),
+                          const Color(0xFF43cea2).withOpacity(0.06),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.teal.withOpacity(0.1),
-                        width: 1,
+                        color: const Color(0xFF185a9d).withOpacity(0.12),
+                        width: 1.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF185a9d).withOpacity(0.08),
+                          blurRadius: 15,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      child: Column(
+                        children: [
+                          // First row
+                          Row(
+                            children: [
+                              _buildStatItemWithIcon(
+                                count: '300+',
+                                label: 'Students',
+                                icon: Icons.people_rounded,
+                                color: Color(0xFF00BCD4),
+                              ),
+                              const Spacer(),
+                              Container(
+                                width: 1,
+                                height: 60,
+                                color: const Color(0xFF185a9d).withOpacity(0.1),
+                              ),
+                              const Spacer(),
+                              _buildStatItemWithIcon(
+                                count: '20+',
+                                label: 'Faculty',
+                                icon: Icons.person_3_rounded,
+                                color: Color(0xFF9C27B0),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(
+                            color: const Color(0xFF185a9d).withOpacity(0.08),
+                            height: 1,
+                          ),
+                          const SizedBox(height: 16),
+                          // Second row
+                          Row(
+                            children: [
+                              _buildStatItemWithIcon(
+                                count: '50+',
+                                label: 'Courses',
+                                icon: Icons.menu_book_rounded,
+                                color: Color(0xFFFFC107),
+                              ),
+                              const Spacer(),
+                              Container(
+                                width: 1,
+                                height: 60,
+                                color: const Color(0xFF185a9d).withOpacity(0.1),
+                              ),
+                              const Spacer(),
+                              _buildStatItemWithIcon(
+                                count: '95%',
+                                label: 'Satisfaction',
+                                icon: Icons.star_rounded,
+                                color: Color(0xFFFF6B6B),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // ============ FOOTER SECTION WITH SOCIAL ICONS ============
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.teal.withOpacity(0.08),
+                          Colors.blue.withOpacity(0.06),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.teal.withOpacity(0.15),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.teal.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Connect With Us',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2c3e50),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF185a9d).withOpacity(0.1),
+                                const Color(0xFF43cea2).withOpacity(0.1),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                              color: const Color(0xFF185a9d).withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => LinearGradient(
+                              colors: [
+                                Color(0xFF185a9d),
+                                Color(0xFF43cea2),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ).createShader(bounds),
+                            child: Text(
+                              'Connect With Us',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -349,29 +481,23 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                               icon: Icons.facebook_rounded,
                               color: Color(0xFF1877F2),
                               label: 'Facebook',
-                              url: '',
+                              url: 'https://www.facebook.com/diu.itm',
                             ),
                             const SizedBox(width: 20),
                             _buildSocialIcon(
                               icon: Icons.language,
                               color: Color(0xFF0EA5E9),
-                              label: 'Twitter',
-                              url: '',
+                              label: 'Website',
+                              url: 'https://daffodilvarsity.edu.bd/department/itm',
                             ),
                             const SizedBox(width: 20),
                             _buildSocialIcon(
-                              icon: Icons.photo_camera_rounded,
+                              icon: Icons.location_on_rounded,
                               color: Color(0xFFE4405F),
-                              label: 'Instagram',
-                              url: '',
+                              label: 'Location',
+                              url: 'https://www.google.com/maps/search/Daffodil+International+University+Birulia',
                             ),
-                            const SizedBox(width: 20),
-                            _buildSocialIcon(
-                              icon: Icons.linked_camera,
-                              color: Color(0xFF0A66C2),
-                              label: 'LinkedIn',
-                              url: '',
-                            ),
+
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -384,9 +510,18 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Daffodil Smart City (DSC), Birulia, Savar, Dhaka - 1216, Bangladesh',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          '© 2024 Daffodil International University',
+                          '© ${DateTime.now().year} Daffodil International University',
                           style: TextStyle(
                             fontSize: 10,
                             color: Colors.grey[500],
@@ -405,7 +540,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
     ).animate().fadeIn(duration: 800.ms, delay: 300.ms).slideY(begin: 0.3, end: 0);
   }
   
-  // Helper method to build social media icons
+  // Helper method to build social media icons - Redesigned
   Widget _buildSocialIcon({
     required IconData icon,
     required Color color,
@@ -423,20 +558,36 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
           : null,
       child: Tooltip(
         message: label,
-        child: Container(
-          padding: const EdgeInsets.all(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withOpacity(0.15),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
+            gradient: LinearGradient(
+              colors: [
+                color.withOpacity(0.2),
+                color.withOpacity(0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            border: Border.all(
+              color: color.withOpacity(0.4),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Icon(
             icon,
             color: color,
-            size: 24,
+            size: 20,
           ),
         ),
       ),
@@ -531,6 +682,69 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
       ),
     );
   }
+  
+  // Helper method to build stat items with icons
+  Widget _buildStatItemWithIcon({
+    required String count,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  color.withOpacity(0.15),
+                  color.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: color.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1a1a1a),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  
+  // Helper method to build resource cards - Modern Interactive Design
+  // (Kept for potential future use)
 }
 
 // Glassmorphism Card Widget

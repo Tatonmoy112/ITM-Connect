@@ -20,8 +20,8 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   final TeacherService _teacherService = TeacherService();
 
   // State
-  int? _selectedIndex;
-  int? _showDailyRoutineIndex;
+  String? _selectedTeacherId;
+  String? _showDailyRoutineTeacherId;
   bool _showSearchBar = false;
   String _selectedDay = DateTime.now().weekday == DateTime.sunday
       ? 'Sunday'
@@ -55,7 +55,82 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     return initials.toUpperCase();
   }
 
-  // Ranking helper removed; teacher ordering handled by Firestore or client-side sorting when needed.
+  // Role category detection with priority order:
+  // 1. Dean, 2. Assistant Dean (or dean-like), 3. Head, 4. Professor, 5. Assistant Professor, 6. Lecturer
+  String _getRoleCategory(String role) {
+    if (role.isEmpty) return 'Faculty';
+    final roleLower = role.toLowerCase();
+    
+    // 1. Dean (highest priority)
+    if (roleLower.contains('dean')) {
+      if (roleLower.contains('assistant')) return 'Assistant Dean';
+      return 'Dean';
+    }
+    
+    // 2. Head (department head, program head, etc.)
+    if (roleLower.contains('head')) return 'Head';
+    
+    // 3. Professor (check for different types)
+    if (roleLower.contains('professor')) {
+      if (roleLower.contains('assistant')) return 'Assistant Professor';
+      return 'Professor';
+    }
+    
+    // 4. Lecturer
+    if (roleLower.contains('lecturer')) return 'Lecturer';
+    
+    // 5. Instructor
+    if (roleLower.contains('instructor')) return 'Instructor';
+    
+    // Fallback to original role if no keywords match
+    return role;
+  }
+
+  // Get role category color for card design
+  Color _getRoleCategoryColor(String role) {
+    final category = _getRoleCategory(role);
+    switch (category) {
+      case 'Dean':
+        return const Color(0xFF6B4226); // Brown
+      case 'Assistant Dean':
+        return const Color(0xFF8B5A3C); // Light Brown
+      case 'Head':
+        return const Color(0xFF1A73E8); // Blue
+      case 'Professor':
+        return const Color(0xFF00897B); // Teal
+      case 'Assistant Professor':
+        return const Color(0xFF00A86B); // Green
+      case 'Lecturer':
+        return const Color(0xFFF57C00); // Orange
+      case 'Instructor':
+        return const Color(0xFF7B1FA2); // Purple
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Get priority rank for sorting (lower number = higher priority)
+  int _getRolePriority(String role) {
+    final category = _getRoleCategory(role);
+    switch (category) {
+      case 'Dean':
+        return 1;
+      case 'Assistant Dean':
+        return 2;
+      case 'Head':
+        return 3;
+      case 'Professor':
+        return 4;
+      case 'Assistant Professor':
+        return 5;
+      case 'Lecturer':
+        return 6;
+      case 'Instructor':
+        return 7;
+      default:
+        return 99;
+    }
+  }
 
   @override
   void initState() {
@@ -201,6 +276,15 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           margin: const pw.EdgeInsets.all(20),
           header: (context) => pw.Column(
             children: [
+              // Teacher Full Week Routine Title - At the very top
+              pw.Center(
+                child: pw.Text(
+                  'Teacher Full Week Routine',
+                  style: boldStyle.copyWith(fontSize: 18, decoration: pw.TextDecoration.underline),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              
               // Top right: Generated through ITM Connect
               pw.Align(
                 alignment: pw.Alignment.topRight,
@@ -259,41 +343,34 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           build: (context) {
             final widgets = <pw.Widget>[];
             
-            // Teacher Full Week Routine Title
+            // Teacher Information Section - Single Line with Equal Spacing
             widgets.add(
-              pw.Center(
-                child: pw.Text(
-                  'Teacher Full Week Routine',
-                  style: boldStyle.copyWith(fontSize: 16, decoration: pw.TextDecoration.underline),
-                ),
-              ),
-            );
-            widgets.add(pw.SizedBox(height: 12));
-            
-            // Teacher Information Section
-            widgets.add(
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Row(
-                    children: [
-                      pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 11)),
-                      pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 11)),
-                    ],
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
                   ),
-                  pw.SizedBox(height: 4),
-                  pw.Row(
-                    children: [
-                      pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 11)),
-                      pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 11)),
-                    ],
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
                   ),
-                  pw.SizedBox(height: 4),
-                  pw.Row(
-                    children: [
-                      pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 11)),
-                      pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 11)),
-                    ],
+                  pw.Expanded(
+                    child: pw.Row(
+                      children: [
+                        pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 13)),
+                        pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 13)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -322,18 +399,18 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                     children: [
                       pw.Text(
                         fullDay,
-                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
+                        style: boldStyle.copyWith(fontSize: 14, color: PdfColors.teal700),
                       ),
                       pw.SizedBox(height: 6),
                       pw.Table.fromTextArray(
                         headers: ['Course', 'Time Slot', 'Room', 'Batch'],
                         data: dayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 9),
+                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 11),
                         headerDecoration: const pw.BoxDecoration(
                           color: PdfColors.teal700,
                         ),
                         cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 8),
+                        cellStyle: const pw.TextStyle(fontSize: 10),
                         border: pw.TableBorder.all(
                           color: PdfColors.grey300,
                           width: 0.5,
@@ -522,7 +599,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                             if (!_showSearchBar) {
                                               _searchController.clear();
                                               _searchQuery = '';
-                                              _selectedIndex = null;
+                                              _selectedTeacherId = null;
                                             }
                                           });
                                         },
@@ -598,7 +675,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                             if (!_showSearchBar) {
                                               _searchController.clear();
                                               _searchQuery = '';
-                                              _selectedIndex = null;
+                                              _selectedTeacherId = null;
                                             }
                                           });
                                         },
@@ -650,7 +727,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                       _showSearchBar = false;
                                       _searchController.clear();
                                       _searchQuery = '';
-                                      _selectedIndex = null;
+                                      _selectedTeacherId = null;
                                     });
                                   },
                                 ),
@@ -666,7 +743,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                               onChanged: (value) {
                                 setState(() {
                                   _searchQuery = value;
-                                  _selectedIndex = null;
+                                  _selectedTeacherId = null;
                                 });
                               },
                             ),
@@ -707,199 +784,51 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       return const Center(child: Text('No teachers found.'));
                     }
 
+                    // Sort teachers by role priority (Dean first, then Assistant Dean, Head, etc.)
+                    final sortedTeachers = List<Teacher>.from(filtered);
+                    sortedTeachers.sort((a, b) => _getRolePriority(a.role).compareTo(_getRolePriority(b.role)));
+
                     return Column(
                       children: List.generate(
-                        filtered.length,
+                        sortedTeachers.length,
                         (index) {
-                          final teacher = filtered[index];
-                          final isSelected = _selectedIndex == index;
+                          final teacher = sortedTeachers[index];
+                          final isSelected = _selectedTeacherId == teacher.id;
+                          final roleCategory = _getRoleCategory(teacher.role);
+                          final roleCategoryColor = _getRoleCategoryColor(teacher.role);
 
-                          return GestureDetector(
+                          return _TeacherCard(
+                            key: ValueKey(teacher.id),
+                            teacher: teacher,
+                            isSelected: isSelected,
+                            roleCategory: roleCategory,
+                            roleCategoryColor: roleCategoryColor,
+                            showDailyRoutineTeacherId: _showDailyRoutineTeacherId,
+                            selectedDay: _selectedDay,
                             onTap: () {
                               setState(() {
                                 if (isSelected) {
-                                  _selectedIndex = null;
+                                  _selectedTeacherId = null;
                                 } else {
-                                  _selectedIndex = index;
+                                  _selectedTeacherId = teacher.id;
                                 }
                               });
                             },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeInOut,
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Teal Header
-                                  Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.teal,
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(12),
-                                        topRight: Radius.circular(12),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                teacher.name,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                teacher.role,
-                                                style: const TextStyle(
-                                                  color: Colors.white70,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        CircleAvatar(
-                                          radius: 28,
-                                          backgroundColor: Colors.white.withOpacity(0.2),
-                                          backgroundImage: (() {
-                                            final url = teacher.imageUrl.trim();
-                                            if (url.isEmpty) return null;
-                                            final lower = url.toLowerCase();
-                                            try {
-                                              if (lower.startsWith('http://') || lower.startsWith('https://')) {
-                                                return NetworkImage(url);
-                                              }
-                                            } catch (_) {}
-                                            return null;
-                                          })(),
-                                          child: (teacher.imageUrl.trim().isEmpty)
-                                              ? Text(
-                                                  _getInitials(teacher.name),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
-                                                  ),
-                                                )
-                                              : null,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Icon(
-                                          isSelected ? Icons.expand_less : Icons.expand_more,
-                                          color: Colors.white,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Content
-                                  Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.email, size: 16, color: Colors.teal),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                teacher.email,
-                                                style: const TextStyle(fontSize: 13, color: Colors.black87),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        if (isSelected) ...[
-                                          const SizedBox(height: 16),
-                                          Row(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton.icon(
-                                                  icon: const Icon(Icons.schedule_rounded, size: 16),
-                                                  label: Text(
-                                                    _showDailyRoutineIndex == index ? 'Hide' : 'Routine',
-                                                    style: const TextStyle(fontSize: 12),
-                                                  ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.teal,
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(6),
-                                                    ),
-                                                  ),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      if (_showDailyRoutineIndex == index) {
-                                                        _showDailyRoutineIndex = null;
-                                                      } else {
-                                                        _showDailyRoutineIndex = index;
-                                                      }
-                                                    });
-                                                  },
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: ElevatedButton.icon(
-                                                  icon: const Icon(Icons.download_rounded, size: 16),
-                                                  label: const Text(
-                                                    'PDF',
-                                                    style: TextStyle(fontSize: 12),
-                                                  ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.deepOrange,
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(6),
-                                                    ),
-                                                  ),
-                                                  onPressed: () {
-                                                    _generateTeacherPDF(teacher);
-                                                  },
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (_showDailyRoutineIndex == index) ...[
-                                            const SizedBox(height: 12),
-                                            _buildDaySelector(),
-                                            const SizedBox(height: 12),
-                                            _buildTeacherRoutineWidget(teacher),
-                                          ],
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            onRoutineToggle: () {
+                              setState(() {
+                                if (_showDailyRoutineTeacherId == teacher.id) {
+                                  _showDailyRoutineTeacherId = null;
+                                } else {
+                                  _showDailyRoutineTeacherId = teacher.id;
+                                }
+                              });
+                            },
+                            onPdfPressed: () {
+                              _generateTeacherPDF(teacher);
+                            },
+                            getInitials: _getInitials,
+                            buildDaySelector: _buildDaySelector,
+                            buildTeacherRoutineWidget: _buildTeacherRoutineWidget,
                           );
                         },
                       ),
@@ -1146,6 +1075,299 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// Separate Stateless Widget for each teacher card to prevent unnecessary rebuilds
+class _TeacherCard extends StatelessWidget {
+  final Teacher teacher;
+  final bool isSelected;
+  final String roleCategory;
+  final Color roleCategoryColor;
+  final String? showDailyRoutineTeacherId;
+  final String selectedDay;
+  final VoidCallback onTap;
+  final VoidCallback onRoutineToggle;
+  final VoidCallback onPdfPressed;
+  final String Function(String) getInitials;
+  final Widget Function() buildDaySelector;
+  final Widget Function(Teacher) buildTeacherRoutineWidget;
+
+  const _TeacherCard({
+    required Key key,
+    required this.teacher,
+    required this.isSelected,
+    required this.roleCategory,
+    required this.roleCategoryColor,
+    required this.showDailyRoutineTeacherId,
+    required this.selectedDay,
+    required this.onTap,
+    required this.onRoutineToggle,
+    required this.onPdfPressed,
+    required this.getInitials,
+    required this.buildDaySelector,
+    required this.buildTeacherRoutineWidget,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: roleCategoryColor.withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 1,
+            ),
+          ],
+          border: Border.all(
+            color: roleCategoryColor.withOpacity(0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Role Category Badge Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    roleCategoryColor,
+                    roleCategoryColor.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  topRight: Radius.circular(14),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      roleCategory,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: isSelected ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Teacher Info Section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Avatar
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: roleCategoryColor.withOpacity(0.15),
+                    backgroundImage: (() {
+                      final url = teacher.imageUrl.trim();
+                      if (url.isEmpty) return null;
+                      final lower = url.toLowerCase();
+                      try {
+                        if (lower.startsWith('http://') || lower.startsWith('https://')) {
+                          return NetworkImage(url);
+                        }
+                      } catch (_) {}
+                      return null;
+                    })(),
+                    child: (teacher.imageUrl.trim().isEmpty)
+                        ? Text(
+                            getInitials(teacher.name),
+                            style: TextStyle(
+                              color: roleCategoryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  // Teacher Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          teacher.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: roleCategoryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            teacher.role,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: roleCategoryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Email and Details Section
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 300),
+              crossFadeState: isSelected ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              firstChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.email, size: 16, color: roleCategoryColor.withOpacity(0.6)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        teacher.email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              secondChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Divider(color: roleCategoryColor.withOpacity(0.2)),
+                    const SizedBox(height: 12),
+                    // Email
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.email, size: 18, color: roleCategoryColor),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            teacher.email,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Action Buttons
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.schedule_rounded, size: 16),
+                            label: Text(
+                              showDailyRoutineTeacherId == teacher.id ? 'Hide' : 'Routine',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: roleCategoryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
+                            onPressed: onRoutineToggle,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.download_rounded, size: 16),
+                            label: const Text(
+                              'PDF',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepOrange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
+                            onPressed: onPdfPressed,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Routine Display
+                    if (showDailyRoutineTeacherId == teacher.id) ...[
+                      const SizedBox(height: 8),
+                      buildDaySelector(),
+                      const SizedBox(height: 12),
+                      buildTeacherRoutineWidget(teacher),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
