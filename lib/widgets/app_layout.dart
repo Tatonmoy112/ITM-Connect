@@ -130,7 +130,7 @@ class _AppLayoutState extends State<AppLayout> with SingleTickerProviderStateMix
                     child: ConstrainedBox(
                       constraints: BoxConstraints(minWidth: constraints.maxWidth),
                       child: SalomonBottomBar(
-                        currentIndex: widget.currentIndex == -1 ? 2 : widget.currentIndex,
+                        currentIndex: widget.currentIndex,
                         onTap: widget.onBottomNavTap,
                         itemPadding: itemPadding,
                         backgroundColor: Colors.white,
