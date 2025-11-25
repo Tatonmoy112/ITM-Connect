@@ -61,6 +61,8 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   int? expandedIndex;
   int? showRoutineIndex;
   String selectedDay = 'Monday';
+  bool isSearching = false;
+  String searchQuery = '';
   
   // Data storage
   List<Teacher> allTeachers = [];
@@ -162,6 +164,20 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       }
     }
     return false;
+  }
+
+  List<Teacher> getFilteredTeachers() {
+    if (searchQuery.isEmpty) {
+      return allTeachers;
+    }
+    
+    final query = searchQuery.toLowerCase();
+    return allTeachers.where((teacher) {
+      return teacher.name.toLowerCase().contains(query) ||
+             teacher.email.toLowerCase().contains(query) ||
+             teacher.role.toLowerCase().contains(query) ||
+             _getRoleCategory(teacher.role).toLowerCase().contains(query);
+    }).toList();
   }
 
   String _getInitials(String name) {
@@ -684,6 +700,17 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     // Sort teachers by role priority
     final sortedTeachers = List<Teacher>.from(allTeachers);
     sortedTeachers.sort((a, b) => _getRolePriority(a.role).compareTo(_getRolePriority(b.role)));
+    
+    // Filter teachers based on search query
+    final filteredTeachers = searchQuery.isEmpty
+        ? sortedTeachers
+        : sortedTeachers.where((teacher) {
+            final query = searchQuery.toLowerCase();
+            return teacher.name.toLowerCase().contains(query) ||
+                   teacher.email.toLowerCase().contains(query) ||
+                   teacher.role.toLowerCase().contains(query) ||
+                   _getRoleCategory(teacher.role).toLowerCase().contains(query);
+          }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -745,31 +772,96 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.all(6),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              'Teachers Directory',
-                                              style: TextStyle(
-                                                fontSize: isMobile ? 16.0 : 22.0,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 0.5,
-                                              ),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Teachers Directory',
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 16.0 : 22.0,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'Find and explore teacher information',
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 11.0 : 13.0,
+                                                    color: Colors.white.withOpacity(0.9),
+                                                    letterSpacing: 0.3,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Find and explore teacher information',
-                                              style: TextStyle(
-                                                fontSize: isMobile ? 11.0 : 13.0,
-                                                color: Colors.white.withOpacity(0.9),
-                                                letterSpacing: 0.3,
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.2),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  isSearching ? Icons.close_rounded : Icons.search_rounded,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    isSearching = !isSearching;
+                                                    searchQuery = '';
+                                                  });
+                                                },
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
+                                    if (isSearching)
+                                      Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: TextField(
+                                          controller: _searchController,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              searchQuery = value;
+                                            });
+                                          },
+                                          decoration: InputDecoration(
+                                            hintText: 'Search by name, email, or role...',
+                                            prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                                            suffixIcon: searchQuery.isNotEmpty
+                                                ? IconButton(
+                                                    icon: const Icon(Icons.clear, color: Colors.grey),
+                                                    onPressed: () {
+                                                      _searchController.clear();
+                                                      setState(() {
+                                                        searchQuery = '';
+                                                      });
+                                                    },
+                                                  )
+                                                : null,
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(color: Colors.teal, width: 1),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(color: Colors.teal, width: 2),
+                                            ),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                          autofocus: true,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -782,9 +874,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: sortedTeachers.length,
+                                itemCount: filteredTeachers.length,
                                 itemBuilder: (context, index) {
-                                  final teacher = sortedTeachers[index];
+                                  final teacher = filteredTeachers[index];
                                   final isExpanded = expandedIndex == index;
                                   final routineVisible = showRoutineIndex == index;
                                   final roleCategory = _getRoleCategory(teacher.role);
