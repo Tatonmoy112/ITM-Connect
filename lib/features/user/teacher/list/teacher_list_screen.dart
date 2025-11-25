@@ -73,7 +73,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize selected day to today if it's a valid day
+    // Initialize selected day to today automatically
     final now = DateTime.now();
     final formattedDay = DateFormat('EEEE').format(now);
     const validDays = [
@@ -83,7 +83,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       'Tuesday',
       'Wednesday',
       'Thursday',
-      'Friday'
     ];
     selectedDay = validDays.contains(formattedDay) ? formattedDay : 'Monday';
     
@@ -593,59 +592,80 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     super.dispose();
   }
 
+  void _showRoutineDetailsSheet(Teacher teacher, Color roleCategoryColor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TeacherRoutineDetailsSheet(
+        teacher: teacher,
+        roleCategoryColor: roleCategoryColor,
+        selectedDay: selectedDay,
+        onDayChanged: (day) {
+          setState(() {
+            selectedDay = day;
+          });
+        },
+        teacherRoutinesMap: teacherRoutinesMap,
+        extractStartTime: _extractStartTime,
+      ),
+    );
+  }
+
   Widget _buildTeacherActionButtons(Teacher teacher, int index, bool routineVisible, Color roleCategoryColor) {
     final hasClasses = _hasTeacherAnyClasses(teacher);
-    
-    // If teacher has no classes, don't show any buttons
-    if (!hasClasses) {
-      return const SizedBox.shrink();
-    }
 
     return Row(
       children: [
         Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.schedule_rounded, size: 16),
-            label: Text(
-              routineVisible ? 'Hide' : 'Routine',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: roleCategoryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: Visibility(
+            visible: hasClasses,
+            replacement: Container(),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.schedule_rounded, size: 16),
+              label: const Text(
+                'Routine',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
-              elevation: 2,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: roleCategoryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
+              ),
+              onPressed: () {
+                _showRoutineDetailsSheet(teacher, roleCategoryColor);
+              },
             ),
-            onPressed: () {
-              setState(() {
-                showRoutineIndex = routineVisible ? null : index;
-              });
-            },
           ),
         ),
-        const SizedBox(width: 10),
+        if (hasClasses) const SizedBox(width: 10),
         Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.download_rounded, size: 16),
-            label: const Text(
-              'PDF',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: Visibility(
+            visible: hasClasses,
+            replacement: Container(),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.download_rounded, size: 16),
+              label: const Text(
+                'PDF',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
-              elevation: 2,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
+              ),
+              onPressed: () {
+                _generateTeacherPDF(teacher);
+              },
             ),
-            onPressed: () {
-              _generateTeacherPDF(teacher);
-            },
           ),
         ),
       ],
@@ -905,7 +925,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                         textAlign: TextAlign.center,
                                                       ),
                                                       const SizedBox(height: 20),
-                                                      _buildTeacherActionButtons(teacher, index, routineVisible, roleCategoryColor),
+                                                      _buildTeacherActionButtons(teacher, index, false, roleCategoryColor),
                                                     ],
                                                   )
                                                 : Row(
@@ -975,30 +995,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                     ],
                                                   ),
                                           ),
-                                          // Routine Section
-                                          if (routineVisible) ...[
-                                            Divider(color: roleCategoryColor.withOpacity(0.2)),
-                                            Padding(
-                                              padding: const EdgeInsets.all(16),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  const Text(
-                                                    'Select Day:',
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.black87,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 10),
-                                                  _buildDaySelector(),
-                                                  const SizedBox(height: 16),
-                                                  _buildTeacherRoutineWidget(teacher),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
                                         ],
                                       ),
                                     ),
@@ -1012,9 +1008,189 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                     ),
     );
   }
+}
+
+class TeacherRoutineDetailsSheet extends StatefulWidget {
+  final Teacher teacher;
+  final Color roleCategoryColor;
+  final String selectedDay;
+  final Function(String) onDayChanged;
+  final Map<String, List<RoutineClass>> teacherRoutinesMap;
+  final String Function(String) extractStartTime;
+
+  const TeacherRoutineDetailsSheet({
+    super.key,
+    required this.teacher,
+    required this.roleCategoryColor,
+    required this.selectedDay,
+    required this.onDayChanged,
+    required this.teacherRoutinesMap,
+    required this.extractStartTime,
+  });
+
+  @override
+  State<TeacherRoutineDetailsSheet> createState() => _TeacherRoutineDetailsSheetState();
+}
+
+class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet> {
+  late String _currentDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDay = widget.selectedDay;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Drag indicator
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 50,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header with teacher info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.roleCategoryColor,
+                      widget.roleCategoryColor.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundImage: (() {
+                            final url = widget.teacher.imageUrl.trim();
+                            if (url.isEmpty) return null;
+                            final lower = url.toLowerCase();
+                            try {
+                              if (lower.startsWith('http://') || lower.startsWith('https://')) {
+                                return NetworkImage(url);
+                              }
+                            } catch (_) {}
+                            return null;
+                          })(),
+                          child: (widget.teacher.imageUrl.trim().isEmpty)
+                              ? Text(
+                                  _getInitials(widget.teacher.name),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.teacher.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.teacher.role,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Day selector and routine content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Select Day:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDaySelector(),
+                        const SizedBox(height: 20),
+                        _buildRoutineList(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.trim().isEmpty) return '';
+    final nameParts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (nameParts.isEmpty) return '';
+    String initials = '';
+    for (final part in nameParts) {
+      if (part.isNotEmpty) {
+        initials += part[0];
+      }
+    }
+    return initials.toUpperCase();
+  }
 
   Widget _buildDaySelector() {
-    final days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    final days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     return SizedBox(
       height: 40,
       child: ListView.separated(
@@ -1023,13 +1199,18 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final day = days[index];
-          final isSelected = selectedDay == day;
+          final isSelected = _currentDay == day;
           return GestureDetector(
-            onTap: () => setState(() => selectedDay = day),
+            onTap: () {
+              setState(() {
+                _currentDay = day;
+              });
+              widget.onDayChanged(day);
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.teal.shade500 : Colors.grey[200],
+                color: isSelected ? widget.roleCategoryColor : Colors.grey[200],
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -1047,10 +1228,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     );
   }
 
-  Widget _buildTeacherRoutineWidget(Teacher teacher) {
-    final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
-    final key = '$teacherInitials|$selectedDay';
-    final routines = teacherRoutinesMap[key] ?? [];
+  Widget _buildRoutineList() {
+    final teacherInitials = widget.teacher.teacherInitial.trim().toUpperCase();
+    final key = '$teacherInitials|$_currentDay';
+    final routines = widget.teacherRoutinesMap[key] ?? [];
 
     if (teacherInitials.isEmpty) {
       return const Padding(
@@ -1069,76 +1250,71 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     // Sort routines by time
     final sortedRoutines = List<RoutineClass>.from(routines);
     sortedRoutines.sort((a, b) {
-      final timeA = _extractStartTime(a.time);
-      final timeB = _extractStartTime(b.time);
+      final timeA = widget.extractStartTime(a.time);
+      final timeB = widget.extractStartTime(b.time);
       return timeA.compareTo(timeB);
     });
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 400),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: sortedRoutines.map((c) {
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: sortedRoutines.map((c) {
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.class_rounded, color: Colors.deepPurple, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                c.courseName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              ),
-                              Text(
-                                c.courseCode,
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                              ),
-                            ],
+                    Icon(Icons.class_rounded, color: widget.roleCategoryColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c.courseName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.schedule, size: 14, color: Colors.blue.shade600),
-                        const SizedBox(width: 6),
-                        Text(
-                          c.time,
-                          style: TextStyle(fontSize: 13, color: Colors.blue.shade600, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.orange.shade600),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Room: ${c.room}',
-                          style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                          Text(
+                            c.courseCode,
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: Colors.blue.shade600),
+                    const SizedBox(width: 6),
+                    Text(
+                      c.time,
+                      style: TextStyle(fontSize: 13, color: Colors.blue.shade600, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 14, color: Colors.orange.shade600),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Room: ${c.room}',
+                      style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
