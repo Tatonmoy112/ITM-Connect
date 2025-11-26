@@ -67,6 +67,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   // Data storage
   List<Teacher> allTeachers = [];
   Map<String, List<RoutineClass>> teacherRoutinesMap = {};
+  Map<String, List<String>> routineDocIds = {}; // Stores document IDs (batch_day) for each routine
   
   // Loading & error states
   bool _loading = true;
@@ -107,6 +108,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
       // Build a map of teacher initials to their routines by day
       final Map<String, List<RoutineClass>> routinesMap = {};
+      final Map<String, List<String>> docIdsMap = {};
 
       for (final routine in allRoutines) {
         for (final routineClass in routine.classes) {
@@ -116,6 +118,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           if (teacherInitials.isNotEmpty) {
             final key = '$teacherInitials|$fullDay';
             routinesMap.putIfAbsent(key, () => []).add(routineClass);
+            docIdsMap.putIfAbsent(key, () => []).add(routine.id); // Store document ID (batch_day)
           }
         }
       }
@@ -124,6 +127,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         setState(() {
           allTeachers = teachers;
           teacherRoutinesMap = routinesMap;
+          routineDocIds = docIdsMap;
           _loading = false;
         });
       }
@@ -342,12 +346,18 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                 final classTeacherInitial = classItem.teacherInitial.trim().toUpperCase();
                 
                 if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
+                  // Extract batch from routine.batch or fallback to document ID
+                  String batchNum = routine.batch;
+                  if (batchNum.isEmpty && routine.id.contains('_')) {
+                    batchNum = routine.id.split('_')[0]; // Extract from "batch_day"
+                  }
+                  
                   fullWeekTableData.add([
                     dayMap[day] ?? day,
                     '${classItem.courseName} (${classItem.courseCode})',
                     classItem.time,
                     classItem.room,
-                    routine.batch,
+                    batchNum,
                   ]);
                 }
               }
@@ -485,9 +495,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                 // Re-sort the day classes by time before adding to PDF
                 final sortedDayClasses = List<List<String>>.from(dayClasses);
                 sortedDayClasses.sort((a, b) {
-                  // a[2] and b[2] contain the time slot
-                  final timeA = _extractStartTime(a[2]);
-                  final timeB = _extractStartTime(b[2]);
+                  // a[0] = Course, a[1] = Time Slot, a[2] = Room, a[3] = Batch
+                  final timeA = _extractStartTime(a[1]);
+                  final timeB = _extractStartTime(b[1]);
                   return timeA.compareTo(timeB);
                 });
                 
@@ -623,6 +633,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
           });
         },
         teacherRoutinesMap: teacherRoutinesMap,
+        routineDocIds: routineDocIds,
         extractStartTime: _extractStartTime,
       ),
     );
@@ -1108,6 +1119,7 @@ class TeacherRoutineDetailsSheet extends StatefulWidget {
   final String selectedDay;
   final Function(String) onDayChanged;
   final Map<String, List<RoutineClass>> teacherRoutinesMap;
+  final Map<String, List<String>> routineDocIds;
   final String Function(String) extractStartTime;
 
   const TeacherRoutineDetailsSheet({
@@ -1117,6 +1129,7 @@ class TeacherRoutineDetailsSheet extends StatefulWidget {
     required this.selectedDay,
     required this.onDayChanged,
     required this.teacherRoutinesMap,
+    this.routineDocIds = const {},
     required this.extractStartTime,
   });
 
@@ -1324,6 +1337,7 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
     final teacherInitials = widget.teacher.teacherInitial.trim().toUpperCase();
     final key = '$teacherInitials|$_currentDay';
     final routines = widget.teacherRoutinesMap[key] ?? [];
+    final docIds = widget.routineDocIds[key] ?? [];
 
     if (teacherInitials.isEmpty) {
       return const Padding(
@@ -1339,17 +1353,31 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
       );
     }
 
-    // Sort routines by time
-    final sortedRoutines = List<RoutineClass>.from(routines);
-    sortedRoutines.sort((a, b) {
-      final timeA = widget.extractStartTime(a.time);
-      final timeB = widget.extractStartTime(b.time);
+    // Create indexed list to maintain correspondence between routines and doc IDs
+    final indexedRoutines = routines.asMap().entries.toList();
+    
+    // Sort by time
+    indexedRoutines.sort((a, b) {
+      final timeA = widget.extractStartTime(a.value.time);
+      final timeB = widget.extractStartTime(b.value.time);
       return timeA.compareTo(timeB);
     });
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: sortedRoutines.map((c) {
+      children: indexedRoutines.map((entry) {
+        final index = entry.key;
+        final c = entry.value;
+        
+        // Extract batch from document ID (format: "batch_day")
+        String batch = 'N/A';
+        if (index < docIds.length) {
+          final docId = docIds[index];
+          if (docId.contains('_')) {
+            batch = docId.split('_')[0]; // Get first part before underscore
+          }
+        }
+        
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1399,6 +1427,13 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
                     Text(
                       'Room: ${c.room}',
                       style: TextStyle(fontSize: 13, color: Colors.orange.shade600, fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.layers_outlined, size: 14, color: Colors.green.shade600),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Batch: $batch',
+                      style: TextStyle(fontSize: 13, color: Colors.green.shade600, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

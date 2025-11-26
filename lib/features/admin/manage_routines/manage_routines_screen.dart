@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -789,7 +790,27 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
   void _addBatch() {
     final newBatch = _batchController.text.trim();
-    if (newBatch.isEmpty || batches.contains(newBatch)) return;
+    
+    // Validate: check if batch is empty or already exists
+    if (newBatch.isEmpty || batches.contains(newBatch)) {
+      if (mounted && newBatch.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This batch already exists!')),
+        );
+      }
+      return;
+    }
+    
+    // Validate: check if batch contains only digits
+    if (!RegExp(r'^\d+$').hasMatch(newBatch)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Batch must contain only numbers (e.g., 61, not 61st)')),
+        );
+      }
+      return;
+    }
+    
     final docId = '${newBatch}_${_shortDay(selectedDay)}';
     _routineService.createEmptyRoutine(docId, newBatch, selectedDay).then((_) {
       _batchController.clear();
@@ -1053,7 +1074,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                               child: TextField(
                                 controller: _batchController,
                                 decoration: InputDecoration(
-                                  hintText: 'Enter new batch (e.g. 61st)',
+                                  hintText: 'Enter new batch (e.g. 61)',
                                   prefixIcon: const Icon(Icons.add_circle_outline),
                                   isDense: true,
                                   contentPadding: EdgeInsets.symmetric(horizontal: contentPadding, vertical: contentPadding - 4),
@@ -1064,6 +1085,10 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                                   fillColor: Colors.grey.shade50,
                                 ),
                                 style: TextStyle(fontSize: subtitleFontSize),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
                               ),
                             ),
                             SizedBox(width: headerPadding),
