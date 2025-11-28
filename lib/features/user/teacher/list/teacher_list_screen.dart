@@ -102,7 +102,6 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     } else {
       selectedDay = 'Monday';
     }
-    print('DEBUG: TeacherListScreen initState - selectedDay set to: $selectedDay (todayName: $todayName, weekday: ${now.weekday})');
     
     // Load all teachers and routines upfront
     _loadAllData();
@@ -1159,7 +1158,6 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
   void initState() {
     super.initState();
     _currentDay = widget.selectedDay;
-    print('DEBUG: TeacherRoutineDetailsSheet initState - _currentDay set to: $_currentDay (from widget.selectedDay)');
   }
 
   @override
