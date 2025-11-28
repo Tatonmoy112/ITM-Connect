@@ -19,7 +19,7 @@ class UserDrawer extends StatelessWidget {
             child: Row(
               children: [
                 Image.asset(
-                  'assets/images/itm_logo.png',
+                  'assets/images/Itm_logo.png',
                   width: 48,
                   height: 48,
                 ),

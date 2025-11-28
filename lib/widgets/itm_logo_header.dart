@@ -21,7 +21,7 @@ class ITMLogoHeader extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Image.asset(
-              'assets/images/itm_logo.png', // ✅ Your uploaded green hat logo
+              'assets/images/Itm_logo.png', // ✅ Your uploaded green hat logo
               fit: BoxFit.contain,
             ),
           ),
