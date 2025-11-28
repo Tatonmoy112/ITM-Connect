@@ -255,7 +255,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/images/Ms. Nusrat Jahan.jfif',
+                            'assets/images/Ms_Nusrat_Jahan.jfif',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
