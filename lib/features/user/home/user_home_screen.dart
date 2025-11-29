@@ -255,7 +255,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/images/Ms_Nusrat_Jahan.jfif',
+                            'assets/images/citations-Picsart-AiImageEnhancer.jpeg',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
@@ -409,6 +409,167 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                   ),
                   const SizedBox(height: 32),
                   
+                  // ============ ITM CURRENT NEWS SECTION ============
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.blue.withOpacity(0.06),
+                          Colors.teal.withOpacity(0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.15),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF185a9d).withOpacity(0.15),
+                                const Color(0xFF43cea2).withOpacity(0.15),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '📰 ITM Current News',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF185a9d),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // News Image - Medium Square
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: Image.asset(
+                              'assets/images/T1.jpeg',
+                              width: 280,
+                              height: 280,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // News Title with styling
+                        Text(
+                          '𝐇𝐞𝐚𝐫𝐭𝐢𝐞𝐬𝐭 𝐂𝐨𝐧𝐠𝐫𝐚𝐭𝐮𝐥𝐚𝐭𝐢𝐨𝐧𝐬 to 𝐃𝐫. 𝐀𝐬𝐡𝐢𝐤𝐮𝐫 𝐑𝐚𝐡𝐦𝐚𝐧',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF185a9d),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // News Content
+                        Text(
+                          'on his well-deserved promotion to 𝐀𝐬𝐬𝐢𝐬𝐭𝐚𝐧𝐭 𝐏𝐫𝐨𝐟𝐞𝐬𝐬𝐨𝐫, Department of Information Technology & Management, DIU\n\n'
+                          'This advancement stands as a testament to his unwavering dedication, exceptional academic leadership, and consistent pursuit of excellence. The ITM family takes immense pride in his remarkable achievement and looks forward to his continued contributions in shaping future innovators.\n\n'
+                          'Wishing him greater achievements and continued distinction in the journey ahead.\n\n'
+                          '#ITMDIU #AcademicExcellence #FacultyAppreciation #AssistantProfessor #ITMDepartmentDIU',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                            height: 1.6,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Facebook Share Button
+                        Center(
+                          child: GestureDetector(
+                            onTap: () async {
+                              try {
+                                final Uri uri = Uri.parse('https://www.facebook.com/diu.itm');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                } else {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Cannot open Facebook')),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: \$e')),
+                                  );
+                                }
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF1877F2).withOpacity(0.9),
+                                    const Color(0xFF165FD1).withOpacity(0.9),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF1877F2).withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.facebook_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Share on Facebook',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
                   // ============ FOOTER SECTION WITH SOCIAL ICONS ============
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -502,7 +663,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Department of Information & Technology Management',
+                          'Department of Information Technology & Management',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
@@ -550,9 +711,23 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
     return GestureDetector(
       onTap: url.isNotEmpty
           ? () async {
-              final Uri uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              try {
+                final Uri uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Cannot open $label')),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error opening $label: $e')),
+                  );
+                }
               }
             }
           : null,

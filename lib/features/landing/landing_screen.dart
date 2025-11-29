@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:itm_connect/features/admin/login/admin_login_screen.dart';
 import 'package:itm_connect/features/user/home/user_home_screen.dart';
 import 'package:itm_connect/widgets/app_layout.dart';
  
@@ -297,26 +296,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                   ),
                 ),
               ],
-            ),
-          ),
-          // Floating admin button
-          Positioned(
-            top: 36,
-            right: 18,
-            child: Material(
-              elevation: 8,
-              shape: const CircleBorder(),
-              color: Colors.indigo,
-              child: IconButton(
-                icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
-                tooltip: 'Admin Login',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                  );
-                },
-              ),
             ),
           ),
         ],
