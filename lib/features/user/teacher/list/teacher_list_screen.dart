@@ -77,18 +77,20 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   void initState() {
     super.initState();
     // Initialize selected day to today automatically using locale-independent weekday
+    // School days: Saturday, Sunday, Monday, Tuesday, Wednesday, Thursday
+    // Off days: Friday
     final now = DateTime.now();
     final weekdayMap = {
       1: 'Monday',
       2: 'Tuesday',
       3: 'Wednesday',
       4: 'Thursday',
-      5: 'Friday',    // Friday (5 = Friday in dart weekday)
+      5: 'Friday',    // Off day
       6: 'Saturday',
       7: 'Sunday',
     };
     final todayName = weekdayMap[now.weekday] ?? 'Monday';
-    const validDays = [
+    const schoolDays = [
       'Saturday',
       'Sunday',
       'Monday',
@@ -96,11 +98,13 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       'Wednesday',
       'Thursday',
     ];
-    // Only set to today if it's a school day, otherwise default to Monday
-    if (validDays.contains(todayName)) {
+    
+    // If today is a school day, use it. Otherwise find next school day
+    if (schoolDays.contains(todayName)) {
       selectedDay = todayName;
     } else {
-      selectedDay = 'Monday';
+      // Today is Friday (off day), so show Saturday (next school day)
+      selectedDay = 'Saturday';
     }
     
     // Load all teachers and routines upfront
@@ -1158,6 +1162,16 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
   void initState() {
     super.initState();
     _currentDay = widget.selectedDay;
+  }
+
+  @override
+  void didUpdateWidget(TeacherRoutineDetailsSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDay != widget.selectedDay) {
+      setState(() {
+        _currentDay = widget.selectedDay;
+      });
+    }
   }
 
   @override
