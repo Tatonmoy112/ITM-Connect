@@ -159,7 +159,8 @@ lib/
 │   ├── feedback.dart
 │   ├── news.dart
 │   ├── routine.dart
-│   └── teacher.dart
+│   ├── teacher.dart
+│   └── exam_routine.dart
 ├── services/                  # Business Logic & API Calls
 │   ├── exam_routine_service.dart
 │   ├── feedback_service.dart
@@ -186,6 +187,7 @@ lib/
 2.  Firebase Project configured.
 3.  `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) placed in respective folders.
 4.  Google Cloud Console API Key enabled for **Google Sheets API** (service account credentials in `assets/itm-connect-credentials.json` if used).
+5.  **Important Security Note**: The file `lib/secrets.dart` containing Google Sheets credentials should **NEVER** be committed to public version control. It should be added to `.gitignore`.
 
 ### Installation
 1.  Clone Repository.
@@ -196,3 +198,6 @@ lib/
 *   **Push Notifications:** Notify students about routine changes or new notices instantly.
 *   **Student Login:** Personalized dashboard (my routine only, my grades).
 *   **Offline Mode:** Cache routine and notices for offline access using Hive or SQLite.
+
+## 7. Conclusion
+The ITM Connect application is a robust, scalable, and user-friendly solution tailored to the specific needs of the ITM department. It leverages modern technologies like Flutter and Firebase to deliver a seamless experience for both students and administrators. By automating routine management (with Google Sheets sync) and centralizing communication, it significantly reduces administrative overhead and improves student engagement.

@@ -27,3 +27,7 @@ Thumbs.db
 
 # Others
 pubspec.lock
+
+# Security
+lib/secrets.dart
+assets/itm-connect-credentials.json
