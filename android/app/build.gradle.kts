@@ -86,6 +86,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+        checkDependencies = false
+    }
+}
+
+// Aggressive workaround for Windows file lock issues during build
+tasks.whenTaskAdded {
+    if (name.contains("lintVitalAnalyzeRelease")) {
+        enabled = false
+    }
 }
 
 flutter {

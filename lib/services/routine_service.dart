@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/services/google_sheet_service.dart';
 
 class RoutineService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -133,5 +134,26 @@ class RoutineService {
           .map((doc) => Routine.fromMap(doc.id, doc.data()))
           .toList();
     });
+  }
+
+  // Sync routines from Google Sheets to Firestore
+  Future<void> syncFromGoogleSheet() async {
+    final gsService = GoogleSheetService();
+    await gsService.init();
+    final routines = await gsService.fetchRoutines();
+    await bulkUploadRoutines(routines);
+  }
+
+  // Bulk upload routines using Firestore batches
+  Future<void> bulkUploadRoutines(List<Routine> routines) async {
+    final batch = _firestore.batch();
+    
+    for (final routine in routines) {
+      if (routine.id.isEmpty) continue;
+      final docRef = _firestore.collection(_collection).doc(routine.id);
+      batch.set(docRef, routine.toMap(), SetOptions(merge: true));
+    }
+
+    await batch.commit();
   }
 }

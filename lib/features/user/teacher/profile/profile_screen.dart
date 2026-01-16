@@ -3,16 +3,19 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itm_connect/features/user/teacher/profile/routine_screen.dart';
 import 'package:itm_connect/widgets/universal_header.dart';
 
+import 'package:itm_connect/models/teacher.dart';
+
 class ProfileScreen extends StatelessWidget {
-  final Map<String, String> teacher;
+  final Teacher teacher;
   const ProfileScreen({super.key, required this.teacher});
 
   @override
   Widget build(BuildContext context) {
-    final name = teacher['name'] ?? 'Unknown';
-    final position = teacher['position'] ?? '';
-    final email = teacher['email'] ?? '';
-    final imageUrl = teacher['image'] ?? '';
+    final name = teacher.name;
+    final position = teacher.role;
+    final email = teacher.email;
+    final imageUrl = teacher.imageUrl;
+    final teacherInitial = teacher.teacherInitial;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -36,18 +39,23 @@ class ProfileScreen extends StatelessWidget {
                         border: Border.all(color: Colors.green.shade700, width: 3),
                       ),
                       child: ClipOval(
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.green,
-                            child: const Icon(Icons.person, size: 60, color: Colors.white),
-                          ),
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(child: CircularProgressIndicator());
-                          },
-                        ),
+                        child: imageUrl.isNotEmpty 
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: Colors.green,
+                                child: const Icon(Icons.person, size: 60, color: Colors.white),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(child: CircularProgressIndicator());
+                              },
+                            )
+                          : Container(
+                              color: Colors.green,
+                              child: const Icon(Icons.person, size: 60, color: Colors.white),
+                            ),
                       ),
                     ),
                   ),
@@ -146,7 +154,10 @@ class ProfileScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => RoutineScreen(teacherName: name),
+                            builder: (_) => RoutineScreen(
+                              teacherName: name,
+                              teacherInitial: teacherInitial,
+                            ),
                           ),
                         );
                       },

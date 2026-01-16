@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:csv/csv.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ManageRoutineScreen extends StatefulWidget {
   const ManageRoutineScreen({super.key});
@@ -785,7 +790,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
 
   String _docId() {
     // Document ID format: {batch}_{dayShort} e.g. "56th_Sat"
-    return '${selectedBatch}_${_shortDay(selectedDay)}';
+    return '${selectedBatch.trim().toUpperCase()}_${_shortDay(selectedDay)}';
   }
 
   void _addBatch() {
@@ -833,6 +838,158 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
       }
     });
   }
+
+  Future<void> _handleGoogleSheetSync() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+      await _routineService.syncFromGoogleSheet();
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sync Successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Sync Failed'),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadCSV() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result == null || (result.files.single.path == null && !kIsWeb)) return;
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+
+      String csvString;
+      if (kIsWeb) {
+        csvString = utf8.decode(result.files.single.bytes!);
+      } else {
+        final file = File(result.files.single.path!);
+        csvString = await file.readAsString();
+      }
+
+      final List<List<dynamic>> rows = const CsvToListConverter().convert(csvString);
+      
+      if (rows.isEmpty) {
+        throw Exception('CSV file is empty');
+      }
+
+      // Skip header if it exists (check if first row contains "batch" or "course")
+      int startRow = 0;
+      if (rows[0].any((cell) => cell.toString().toLowerCase().contains('batch') || cell.toString().toLowerCase().contains('course'))) {
+        startRow = 1;
+      }
+
+      final Map<String, Routine> routineMap = {};
+
+      for (int i = startRow; i < rows.length; i++) {
+        final row = rows[i];
+        if (row.length < 8) continue; // Basic validation: batch, day, courseName, courseCode, teacherName, teacherInitial, room, time
+
+        final batch = row[0].toString().trim();
+        final day = row[1].toString().trim();
+        final courseName = row[2].toString().trim();
+        final courseCode = row[3].toString().trim();
+        final teacherName = row[4].toString().trim();
+        final teacherInitial = row[5].toString().trim().toUpperCase();
+        final room = row[6].toString().trim();
+        final time = row[7].toString().trim();
+
+        if (batch.isEmpty || day.isEmpty) continue;
+
+        final docId = '${batch}_${_shortDay(day)}';
+        
+        if (!routineMap.containsKey(docId)) {
+          routineMap[docId] = Routine(
+            id: docId,
+            batch: batch,
+            day: day,
+            teacherInitial: '', // We don't have a global teacher initial in CSV
+            classes: [],
+          );
+        }
+
+        routineMap[docId]!.classes.add(RoutineClass(
+          courseName: courseName,
+          courseCode: courseCode,
+          teacherName: teacherName,
+          teacherInitial: teacherInitial,
+          room: room,
+          time: time,
+        ));
+      }
+
+      if (routineMap.isEmpty) {
+        throw Exception('No valid routine data found in CSV');
+      }
+
+      await _routineService.bulkUploadRoutines(routineMap.values.toList());
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('CSV Upload Successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context); // Close loading if open
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Upload Failed'),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -913,14 +1070,60 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Routines Hub',
-                                    style: TextStyle(
-                                      fontSize: headerFontSize,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Routines Hub',
+                                        style: TextStyle(
+                                          fontSize: headerFontSize,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      // Sync Button in Header
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _handleGoogleSheetSync(),
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.sync,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // CSV Upload Button
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _pickAndUploadCSV(),
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.upload_file,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
@@ -1057,12 +1260,47 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                     children: [
                       // Show entire Manage Batches section only when no batch is selected
                       if (selectedBatch.isEmpty) ...[
-                        Text(
-                          'Manage Batches',
-                          style: TextStyle(
-                            fontSize: headerFontSize - 4,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Manage Batches',
+                              style: TextStyle(
+                                fontSize: headerFontSize - 4,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _handleGoogleSheetSync(),
+                              icon: const Icon(Icons.sync, size: 18),
+                              label: const Text('Sync from Sheet'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.teal.shade700,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.teal.shade100),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 20, color: Colors.teal.shade600),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'You can import all routines at once from Google Sheets using the sync button.',
+                                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),

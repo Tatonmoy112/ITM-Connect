@@ -18,6 +18,7 @@ class TeacherService {
             role: data['role'] ?? '',
             imageUrl: data['imageUrl'] ?? '',
             teacherInitial: teacherInitial,
+            consultingHour: data['consultingHour'] ?? '',
           );
         }).toList();
       });
@@ -44,6 +45,7 @@ class TeacherService {
           role: data['role'] ?? '',
           imageUrl: data['imageUrl'] ?? '',
           teacherInitial: teacherInitial,
+          consultingHour: data['consultingHour'] ?? '',
         );
       }).toList();
     }
@@ -56,6 +58,7 @@ class TeacherService {
     required String email,
     required String role,
     required String imageUrl,
+    required String consultingHour,
   }) async {
     await teachersCollection.doc(teacherInitial).set({
       'teacherInitial': teacherInitial,
@@ -63,6 +66,7 @@ class TeacherService {
       'email': email,
       'role': role,
       'imageUrl': imageUrl,
+      'consultingHour': consultingHour,
     });
   }
 }

@@ -3,11 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:collection/collection.dart'; // For mapIndexed
 import 'package:intl/intl.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
-import 'package:itm_connect/services/pdf_download_service.dart';
+import 'package:itm_connect/services/pdf_routine_service.dart';
 
 class ClassRoutineScreen extends StatefulWidget {
   const ClassRoutineScreen({super.key});
@@ -17,7 +15,7 @@ class ClassRoutineScreen extends StatefulWidget {
 }
 
 class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
-  int? selectedBatch;
+  String? selectedBatch;
   String? selectedDay;
 
   final List<String> days = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
@@ -25,42 +23,116 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
   // Helper method to extract start time for sorting
   String _extractStartTime(String timeRange) {
-    // Expects format like "8:30 AM - 10:00 AM"
+    // Expects format like "8:30 AM - 10:00 AM" or "8:30 AM"
     final parts = timeRange.split('-');
-    if (parts.isNotEmpty) {
-      final startTime = parts[0].trim();
-      // Convert to 24-hour format for proper sorting
-      return _convertTo24Hour(startTime);
+    String startTime = parts.isNotEmpty ? parts[0].trim() : timeRange.trim();
+    
+    // Handle the formatTo12Hr logic for serial/raw times if needed
+    startTime = formatTo12Hr(startTime);
+
+    // Convert to 24-hour format for proper sorting
+    return _convertTo24Hour(startTime);
+  }
+
+  // User provided helper for time formatting
+  String formatTo12Hr(String inputTime) {
+    if (inputTime.isEmpty) return "";
+    inputTime = inputTime.trim();
+    try {
+      // Handle serial time from Excel/Sheets
+      final double? serialTime = double.tryParse(inputTime);
+      if (serialTime != null) {
+        int totalMinutes = (serialTime * 24 * 60).round();
+        int hour = (totalMinutes ~/ 60) % 24;
+        int minute = totalMinutes % 60;
+        return _formatHourMinute(hour, minute);
+      }
+      
+      // Handle 24h string like "13:00" or "8:30"
+      if (!inputTime.toUpperCase().contains('AM') && !inputTime.toUpperCase().contains('PM')) {
+        final bits = inputTime.split(':');
+        if (bits.isNotEmpty) {
+          int hour = int.tryParse(bits[0]) ?? 0;
+          int minute = bits.length > 1 ? (int.tryParse(bits[1]) ?? 0) : 0;
+          return _formatHourMinute(hour, minute);
+        }
+      }
+
+      return inputTime;
+    } catch (e) {
+      return inputTime;
     }
-    return '00:00';
+  }
+
+  String _formatHourMinute(int hour, int minute) {
+    String period = "AM";
+    if (hour >= 12) {
+      period = "PM";
+      if (hour > 12) hour -= 12;
+    } else if (hour == 0) {
+      hour = 12;
+    }
+    String minuteStr = minute.toString().padLeft(2, '0');
+    return "$hour:$minuteStr $period";
   }
 
   // Convert 12-hour to 24-hour format for sorting
-  String _convertTo24Hour(String time12) {
-    // Expects format like "8:30 AM" or "10:00 PM"
-    final parts = time12.trim().split(RegExp(r'\s+'));
-    if (parts.length < 2) return '00:00';
-    
-    final timePart = parts[0]; // "8:30" or "10:00"
-    final period = parts[1].toUpperCase(); // "AM" or "PM"
-    
-    final timeBits = timePart.split(':');
-    if (timeBits.length < 2) return '00:00';
-    
-    var hour = int.tryParse(timeBits[0]) ?? 0;
-    final minute = timeBits[1];
-    
-    if (period == 'PM' && hour != 12) {
-      hour += 12;
-    } else if (period == 'AM' && hour == 12) {
-      hour = 0;
+  String _convertTo24Hour(String timeStr) {
+    timeStr = timeStr.trim().toUpperCase();
+    if (timeStr.isEmpty) return '00:00';
+
+    // Check if it already has AM/PM
+    if (timeStr.contains('AM') || timeStr.contains('PM')) {
+      final parts = timeStr.split(RegExp(r'\s+'));
+      if (parts.length < 2) return '00:00';
+      
+      final timePart = parts[0];
+      final period = parts[1];
+      
+      final timeBits = timePart.split(':');
+      if (timeBits.length < 1) return '00:00';
+      
+      var hour = int.tryParse(timeBits[0]) ?? 0;
+      final minute = timeBits.length > 1 ? timeBits[1] : '00';
+      
+      if (period == 'PM' && hour != 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+      return '${hour.toString().padLeft(2, '0')}:${minute.padLeft(2, '0')}';
     }
+
+    // Handle 24h format like "13:00" or "8:30"
+    final bits = timeStr.split(':');
+    if (bits.isEmpty) return '00:00';
     
-    return '${hour.toString().padLeft(2, '0')}:$minute';
+    var hour = int.tryParse(bits[0]) ?? 0;
+    final minute = bits.length > 1 ? bits[1] : '00';
+    
+    return '${hour.toString().padLeft(2, '0')}:${minute.padLeft(2, '0')}';
+  }
+
+  String _shortDay(String day) {
+    switch (day.trim().toLowerCase()) {
+      case 'saturday': return 'Sat';
+      case 'sunday': return 'Sun';
+      case 'monday': return 'Mon';
+      case 'tuesday': return 'Tue';
+      case 'wednesday': return 'Wed';
+      case 'thursday': return 'Thu';
+      case 'friday': return 'Fri';
+      default:
+        if (day.length >= 3) {
+          return day.substring(0, 1).toUpperCase() + day.substring(1, 3).toLowerCase();
+        }
+        return day;
+    }
   }
 
   Future<void> _generateAndOpenFile() async {
-    if (selectedBatch == null) {
+    final batch = selectedBatch;
+    if (batch == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a batch first')),
       );
@@ -108,282 +180,39 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
         );
       }
 
-      final pdf = pw.Document();
-      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-      final normalStyle = pw.TextStyle(fontWeight: pw.FontWeight.normal);
-
-      // Load DIU logo
-      pw.MemoryImage? diuLogo;
-      try {
-        diuLogo = pw.MemoryImage(
-          (await rootBundle.load('assets/images/DIU_logo.png')).buffer.asUint8List(),
-        );
-      } catch (e) {
-        print('Warning: Could not load DIU logo from assets/images/DIU_logo.png: $e');
-      }
-
-      // Fetch all routine data from Firebase first
-      final Map<String, List<List<String>>> classesByDay = {};
+      // Fetch all routine data for this batch
+      final List<Routine> batchRoutines = [];
       for (final day in days) {
-        final routineId = '${selectedBatch}_$day';
+        final routineId = '${batch.trim().toUpperCase()}_${_shortDay(day)}';
         final routine = await _routineService.getRoutine(routineId);
-
         if (routine != null && routine.classes.isNotEmpty) {
-          // Sort classes by time
-          final sortedClasses = List.from(routine.classes);
-          sortedClasses.sort((a, b) {
-            final timeA = _extractStartTime(a.time);
-            final timeB = _extractStartTime(b.time);
-            return timeA.compareTo(timeB);
-          });
-          
-          classesByDay[day] = [];
-          for (final classItem in sortedClasses) {
-            classesByDay[day]!.add([
-              '${classItem.courseName} (${classItem.courseCode})',
-              classItem.time,
-              classItem.room,
-              classItem.teacherInitial,
-            ]);
-          }
+          batchRoutines.add(routine);
         }
       }
 
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.only(left: 15, right: 15, top: 12, bottom: 12),
-          header: (context) => pw.Column(
-            children: [
-              // Top right: Generated through ITM Connect
-              pw.Align(
-                alignment: pw.Alignment.topRight,
-                child: pw.Text(
-                  'Generated through ITM Connect',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              
-              // DIU Logo
-              if (diuLogo != null)
-                pw.Align(
-                  alignment: pw.Alignment.center,
-                  child: pw.Image(diuLogo, width: 60, height: 60),
-                )
-              else
-                pw.Align(
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    'DIU Logo',
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
-                  ),
-                ),
-              pw.SizedBox(height: 6),
-              
-              // Department Information
-              pw.Center(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    pw.Text(
-                      'Department of Information Technology & Management',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      'Faculty of Science and Information Technology',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 9),
-                    ),
-                    pw.SizedBox(height: 1),
-                    pw.Text(
-                      'Daffodil International University',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 9),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              
-              // Class Routine Title - Below university text
-              pw.Center(
-                child: pw.Text(
-                  'Class Routine for Batch $selectedBatch',
-                  style: boldStyle.copyWith(fontSize: 14, decoration: pw.TextDecoration.underline),
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Divider(thickness: 0.5),
-            ],
-          ),
-          build: (context) {
-            if (classesByDay.isEmpty) {
-              return [pw.Center(child: pw.Text('No routine available for this batch.'))];
-            }
-            
-            final widgets = <pw.Widget>[];
-            
-            // Batch Information Section - Single Line with Equal Spacing
-            widgets.add(
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Batch: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text('$selectedBatch', style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Generated: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Class Time: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text('8:30 AM - 4:00 PM', style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-            widgets.add(pw.SizedBox(height: 8));
-            
-            // Create separate table for each day
-            for (final day in days) {
-              final dayClasses = classesByDay[day];
-              
-              if (dayClasses != null && dayClasses.isNotEmpty) {
-                // Re-sort the day classes by time before adding to PDF
-                final sortedDayClasses = List<List<String>>.from(dayClasses);
-                sortedDayClasses.sort((a, b) {
-                  // a[1] and b[1] contain the time slot
-                  final timeA = _extractStartTime(a[1]);
-                  final timeB = _extractStartTime(b[1]);
-                  return timeA.compareTo(timeB);
-                });
-                
-                widgets.add(
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        day,
-                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
-                      ),
-                      pw.SizedBox(height: 3),
-                      pw.Table.fromTextArray(
-                        headers: ['Course', 'Time Slot', 'Room', 'Teacher Initial'],
-                        data: sortedDayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
-                        headerDecoration: const pw.BoxDecoration(
-                          color: PdfColors.teal700,
-                        ),
-                        cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 9),
-                        border: pw.TableBorder.all(
-                          color: PdfColors.grey300,
-                          width: 0.5,
-                        ),
-                        columnWidths: {
-                          0: const pw.FlexColumnWidth(2.5),
-                          1: const pw.FlexColumnWidth(1.8),
-                          2: const pw.FlexColumnWidth(1.2),
-                          3: const pw.FlexColumnWidth(1.2),
-                        },
-                      ),
-                      pw.SizedBox(height: 8),
-                    ],
-                  ),
-                );
-              }
-            }
-            
-            return widgets;
-          },
-          footer: (context) => pw.Column(
-            children: [
-              pw.Divider(thickness: 0.5),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                'Generated on: ${DateTime.now().toString().split('.')[0]}',
-                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
+      if (mounted) Navigator.pop(context); // Hide loading
 
-      final fileName = 'Batch${selectedBatch}_Weekly_Routine.pdf';
-      
-      // Save PDF using cross-platform service and open it
-      final pdfBytes = await pdf.save();
-      
-      try {
-        await PdfDownloadService.downloadAndOpenPdf(
-          pdfBytes: pdfBytes.toList(),
-          fileName: fileName,
-        );
-      } catch (e) {
+      if (batchRoutines.isEmpty) {
         if (mounted) {
-          Navigator.of(context).pop(); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
+            const SnackBar(content: Text('No routine data found for this batch.')),
           );
         }
         return;
       }
 
-      // Close loading dialog
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
+      await PdfRoutineService.generateRoutinePdf(
+        routines: batchRoutines,
+        title: "Full Week Class Routine",
+        subtitle: "Batch: ${batch.toUpperCase()}",
+        batchName: batch,
+      );
 
-      // Show success dialog
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('✓ PDF Downloaded Successfully'),
-            content: Text(
-              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB\n\nThe file has been saved to your device.',
-              style: const TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        
+        Navigator.pop(context); // Hide loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error generating PDF: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
+          SnackBar(content: Text('Error generating PDF: $e')),
         );
       }
     }
@@ -413,8 +242,10 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
     final subtitleFontSize = isMobile ? 11.0 : (isTablet ? 12.0 : 13.0);
     final headerPadding = isMobile ? 8.0 : (isTablet ? 10.0 : 12.0);
     
-    final routineId = selectedBatch != null && selectedDay != null
-        ? '${selectedBatch}_$selectedDay'
+    final batch = selectedBatch;
+    final day = selectedDay;
+    final routineId = batch != null && day != null
+        ? '${batch.trim().toUpperCase()}_${_shortDay(day)}'
         : null;
 
     return Scaffold(
@@ -507,17 +338,15 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                 child: TextField(
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.text,
+                                  textCapitalization: TextCapitalization.characters,
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Enter Batch Number',
+                                    hintText: 'Enter Batch (e.g. 61st)',
                                     prefixIcon: Icon(Icons.group),
                                   ),
                                   onChanged: (value) {
-                                    final batch = int.tryParse(value);
-                                    if (batch != null && batch > 0) {
-                                      setState(() => selectedBatch = batch);
-                                    }
+                                    setState(() => selectedBatch = value.trim().isNotEmpty ? value.trim() : null);
                                   },
                                 ),
                               ),

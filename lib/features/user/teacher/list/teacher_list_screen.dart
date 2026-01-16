@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
-import 'package:itm_connect/services/pdf_download_service.dart';
+import 'package:itm_connect/services/pdf_routine_service.dart';
+import 'package:itm_connect/features/user/teacher/profile/profile_screen.dart';
 
 class TeacherListScreen extends StatefulWidget {
   const TeacherListScreen({super.key});
@@ -20,6 +19,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   final TeacherService _teacherService = TeacherService();
   final RoutineService _routineService = RoutineService();
   final TextEditingController _searchController = TextEditingController();
+  
+  // Stream subscriptions
+  dynamic _teacherSubscription;
+  dynamic _routineSubscription;
 
   // Helper method to extract start time for sorting
   String _extractStartTime(String timeRange) {
@@ -34,27 +37,40 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   }
 
   // Convert 12-hour to 24-hour format for sorting
-  String _convertTo24Hour(String time12) {
-    // Expects format like "8:30 AM" or "10:00 PM"
-    final parts = time12.trim().split(RegExp(r'\s+'));
-    if (parts.length < 2) return '00:00';
-    
-    final timePart = parts[0]; // "8:30" or "10:00"
-    final period = parts[1].toUpperCase(); // "AM" or "PM"
-    
-    final timeBits = timePart.split(':');
-    if (timeBits.length < 2) return '00:00';
-    
-    var hour = int.tryParse(timeBits[0]) ?? 0;
-    final minute = timeBits[1];
-    
-    if (period == 'PM' && hour != 12) {
-      hour += 12;
-    } else if (period == 'AM' && hour == 12) {
-      hour = 0;
+  String _convertTo24Hour(String timeStr) {
+    timeStr = timeStr.trim().toUpperCase();
+    if (timeStr.isEmpty) return '00:00';
+
+    // Check if it already has AM/PM
+    if (timeStr.contains('AM') || timeStr.contains('PM')) {
+      final parts = timeStr.split(RegExp(r'\s+'));
+      if (parts.length < 2) return '00:00';
+      
+      final timePart = parts[0];
+      final period = parts[1];
+      
+      final timeBits = timePart.split(':');
+      if (timeBits.length < 1) return '00:00';
+      
+      var hour = int.tryParse(timeBits[0]) ?? 0;
+      final minute = timeBits.length > 1 ? timeBits[1] : '00';
+      
+      if (period == 'PM' && hour != 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+      return '${hour.toString().padLeft(2, '0')}:${minute.padLeft(2, '0')}';
     }
+
+    // Handle 24h format like "13:00" or "8:30"
+    final bits = timeStr.split(':');
+    if (bits.isEmpty) return '00:00';
     
-    return '${hour.toString().padLeft(2, '0')}:$minute';
+    var hour = int.tryParse(bits[0]) ?? 0;
+    final minute = bits.length > 1 ? bits[1] : '00';
+    
+    return '${hour.toString().padLeft(2, '0')}:${minute.padLeft(2, '0')}';
   }
 
   // State
@@ -107,56 +123,50 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       selectedDay = 'Saturday';
     }
     
-    // Load all teachers and routines upfront
-    _loadAllData();
+    // Load all teachers and routines upfront and keep them updated
+    _initStreams();
   }
 
-  Future<void> _loadAllData() async {
-    try {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-
-      // Load all teachers
-      final teachers = await _teacherService.getAllTeachers();
-      
-      // Load all routines
-      final allRoutines = await _routineService.streamAllRoutines().first;
-
-      // Build a map of teacher initials to their routines by day
-      final Map<String, List<RoutineClass>> routinesMap = {};
-      final Map<String, List<String>> docIdsMap = {};
-
-      for (final routine in allRoutines) {
-        for (final routineClass in routine.classes) {
-          final teacherInitials = routineClass.teacherInitial.trim().toUpperCase();
-          final fullDay = _getFullDayName(routine.day);
-
-          if (teacherInitials.isNotEmpty) {
-            final key = '$teacherInitials|$fullDay';
-            routinesMap.putIfAbsent(key, () => []).add(routineClass);
-            docIdsMap.putIfAbsent(key, () => []).add(routine.id); // Store document ID (batch_day)
-          }
-        }
-      }
-
+  void _initStreams() {
+    _teacherSubscription = _teacherService.streamAllTeachers().listen((teachers) {
       if (mounted) {
         setState(() {
           allTeachers = teachers;
-          teacherRoutinesMap = routinesMap;
-          routineDocIds = docIdsMap;
-          _loading = false;
+          if (_loading && teacherRoutinesMap.isNotEmpty) _loading = false;
         });
       }
-    } catch (e) {
+    });
+
+    _routineSubscription = _routineService.streamAllRoutines().listen((allRoutines) {
       if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
+        _processRoutines(allRoutines);
+      }
+    });
+  }
+
+  void _processRoutines(List<Routine> allRoutines) {
+    // Build a map of teacher initials to their routines by day
+    final Map<String, List<RoutineClass>> routinesMap = {};
+    final Map<String, List<String>> docIdsMap = {};
+
+    for (final routine in allRoutines) {
+      for (final routineClass in routine.classes) {
+        final teacherInitials = routineClass.teacherInitial.trim().toUpperCase();
+        final fullDay = _getFullDayName(routine.day);
+
+        if (teacherInitials.isNotEmpty) {
+          final key = '$teacherInitials|$fullDay';
+          routinesMap.putIfAbsent(key, () => []).add(routineClass);
+          docIdsMap.putIfAbsent(key, () => []).add(routine.id); // Store document ID (batch_day)
+        }
       }
     }
+
+    setState(() {
+      teacherRoutinesMap = routinesMap;
+      routineDocIds = docIdsMap;
+      _loading = false;
+    });
   }
 
   String _getFullDayName(String shortDay) {
@@ -324,69 +334,30 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         );
       }
 
-      final pdf = pw.Document();
-      final boldStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold);
-      final normalStyle = pw.TextStyle(fontWeight: pw.FontWeight.normal);
-
-      // Load DIU logo
-      pw.MemoryImage? diuLogo;
-      try {
-        diuLogo = pw.MemoryImage(
-          (await rootBundle.load('assets/images/DIU_logo.png')).buffer.asUint8List(),
-        );
-      } catch (e) {
-        print('Warning: Could not load DIU logo from assets/images/DIU_logo.png: $e');
-      }
-
       final teacherInitials = teacher.teacherInitial.trim().toUpperCase();
-      final List<List<String>> fullWeekTableData = [];
       
-      final dayMap = {
-        'Sat': 'Saturday',
-        'Sun': 'Sunday',
-        'Mon': 'Monday',
-        'Tue': 'Tuesday',
-        'Wed': 'Wednesday',
-        'Thu': 'Thursday',
-        'Fri': 'Friday',
-      };
-      
-      final daysOrder = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-
-      // Fetch all routines for PDF generation
+      // Fetch all routines
       final allRoutines = await _routineService.streamAllRoutines().first;
-
-      for (final day in daysOrder) {
-        for (final routine in allRoutines) {
-          if (_getFullDayName(routine.day) == dayMap[day]) {
-            if (routine.classes.isNotEmpty) {
-              for (final classItem in routine.classes) {
-                final classTeacherInitial = classItem.teacherInitial.trim().toUpperCase();
-                
-                if (classTeacherInitial == teacherInitials && classTeacherInitial.isNotEmpty) {
-                  // Extract batch from routine.batch or fallback to document ID
-                  String batchNum = routine.batch;
-                  if (batchNum.isEmpty && routine.id.contains('_')) {
-                    batchNum = routine.id.split('_')[0]; // Extract from "batch_day"
-                  }
-                  
-                  fullWeekTableData.add([
-                    dayMap[day] ?? day,
-                    '${classItem.courseName} (${classItem.courseCode})',
-                    classItem.time,
-                    classItem.room,
-                    batchNum,
-                  ]);
-                }
-              }
-            }
-          }
+      
+      // Filter routines that contain this teacher
+      final List<Routine> teacherRoutines = [];
+      for (final routine in allRoutines) {
+        final teacherClasses = routine.classes.where((c) => c.teacherInitial.trim().toUpperCase() == teacherInitials).toList();
+        if (teacherClasses.isNotEmpty) {
+          teacherRoutines.add(Routine(
+            id: routine.id,
+            batch: routine.batch.isEmpty && routine.id.contains('_') ? routine.id.split('_')[0] : routine.batch,
+            day: routine.day,
+            teacherInitial: routine.teacherInitial,
+            classes: teacherClasses,
+          ));
         }
       }
       
-      if (fullWeekTableData.isEmpty) {
+      if (mounted) Navigator.pop(context); // Hide loading
+
+      if (teacherRoutines.isEmpty) {
         if (mounted) {
-          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No classes scheduled for this teacher.')),
           );
@@ -394,237 +365,20 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         return;
       }
 
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.only(left: 15, right: 15, top: 12, bottom: 12),
-          header: (context) => pw.Column(
-            children: [
-              pw.Align(
-                alignment: pw.Alignment.topRight,
-                child: pw.Text(
-                  'Generated through ITM Connect',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              
-              if (diuLogo != null)
-                pw.Align(
-                  alignment: pw.Alignment.center,
-                  child: pw.Image(diuLogo, width: 60, height: 60),
-                )
-              else
-                pw.Align(
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    'DIU Logo',
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
-                  ),
-                ),
-              pw.SizedBox(height: 6),
-              
-              pw.Center(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    pw.Text(
-                      'Department of Information Technology & Management',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      'Faculty of Science and Information Technology',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 9),
-                    ),
-                    pw.SizedBox(height: 1),
-                    pw.Text(
-                      'Daffodil International University',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 9),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              
-              pw.Center(
-                child: pw.Text(
-                  'Teacher Full Week Routine',
-                  style: boldStyle.copyWith(fontSize: 14, decoration: pw.TextDecoration.underline),
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Divider(thickness: 0.5),
-            ],
-          ),
-          build: (context) {
-            final widgets = <pw.Widget>[];
-            
-            widgets.add(
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Name: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text(teacher.name, style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Email: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text(teacher.email, style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                  pw.Expanded(
-                    child: pw.Row(
-                      children: [
-                        pw.Text('Designation: ', style: boldStyle.copyWith(fontSize: 11)),
-                        pw.Text(teacher.role, style: normalStyle.copyWith(fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-            widgets.add(pw.SizedBox(height: 8));
-            
-            final Map<String, List<List<String>>> classesByDay = {};
-            for (final row in fullWeekTableData) {
-              final day = row[0];
-              if (!classesByDay.containsKey(day)) {
-                classesByDay[day] = [];
-              }
-              classesByDay[day]!.add([row[1], row[2], row[3], row[4]]);
-            }
-            
-            for (final day in daysOrder) {
-              final fullDay = dayMap[day] ?? day;
-              final dayClasses = classesByDay[fullDay];
-              
-              if (dayClasses != null && dayClasses.isNotEmpty) {
-                // Re-sort the day classes by time before adding to PDF
-                final sortedDayClasses = List<List<String>>.from(dayClasses);
-                sortedDayClasses.sort((a, b) {
-                  // a[0] = Course, a[1] = Time Slot, a[2] = Room, a[3] = Batch
-                  final timeA = _extractStartTime(a[1]);
-                  final timeB = _extractStartTime(b[1]);
-                  return timeA.compareTo(timeB);
-                });
-                
-                widgets.add(
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        fullDay,
-                        style: boldStyle.copyWith(fontSize: 12, color: PdfColors.teal700),
-                      ),
-                      pw.SizedBox(height: 3),
-                      pw.Table.fromTextArray(
-                        headers: ['Course', 'Time Slot', 'Room', 'Batch'],
-                        data: sortedDayClasses,
-                        headerStyle: boldStyle.copyWith(color: PdfColors.white, fontSize: 10),
-                        headerDecoration: const pw.BoxDecoration(
-                          color: PdfColors.teal700,
-                        ),
-                        cellAlignment: pw.Alignment.center,
-                        cellStyle: const pw.TextStyle(fontSize: 9),
-                        border: pw.TableBorder.all(
-                          color: PdfColors.grey300,
-                          width: 0.5,
-                        ),
-                        columnWidths: {
-                          0: const pw.FlexColumnWidth(2.5),
-                          1: const pw.FlexColumnWidth(1.8),
-                          2: const pw.FlexColumnWidth(1.2),
-                          3: const pw.FlexColumnWidth(1),
-                        },
-                      ),
-                      pw.SizedBox(height: 8),
-                    ],
-                  ),
-                );
-              }
-            }
-            
-            return widgets;
-          },
-          footer: (context) => pw.Column(
-            children: [
-              pw.Divider(thickness: 0.5),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                'Generated on: ${DateTime.now().toString().split('.')[0]}',
-                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey),
-              ),
-            ],
-          ),
-        ),
+      await PdfRoutineService.generateRoutinePdf(
+        routines: teacherRoutines,
+        title: "Teacher Full Week Routine",
+        subtitle: "${teacher.name} (${teacher.role})",
+        teacherName: teacher.name,
+        teacherRole: teacher.role,
+        consultingHour: teacher.consultingHour,
       );
 
-      final fileName = '${teacher.name.replaceAll(' ', '_')}_Full_Week_Routine.pdf';
-      final pdfBytes = await pdf.save();
-      
-      try {
-        await PdfDownloadService.downloadAndOpenPdf(
-          pdfBytes: pdfBytes.toList(),
-          fileName: fileName,
-        );
-      } catch (e) {
-        if (mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('✓ PDF Downloaded Successfully'),
-            content: Text(
-              'File: $fileName\n\nSize: ${PdfDownloadService.getFileSizeInKB(pdfBytes.toList())} KB',
-              style: const TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
-        
+        Navigator.pop(context); // Hide loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error generating PDF: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
+          SnackBar(content: Text('Error generating PDF: $e')),
         );
       }
     }
@@ -633,6 +387,8 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _teacherSubscription?.cancel();
+    _routineSubscription?.cancel();
     super.dispose();
   }
 
@@ -662,10 +418,37 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
 
     return Row(
       children: [
+        // Profile Button - Always visible
         Expanded(
-          child: Visibility(
-            visible: hasClasses,
-            replacement: Container(),
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.person_rounded, size: 16),
+            label: const Text(
+              'Profile',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 2,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(teacher: teacher),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Routine Button - Only if has classes
+        if (hasClasses) ...[
+          Expanded(
             child: ElevatedButton.icon(
               icon: const Icon(Icons.schedule_rounded, size: 16),
               label: const Text(
@@ -686,12 +469,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               },
             ),
           ),
-        ),
-        if (hasClasses) const SizedBox(width: 10),
-        Expanded(
-          child: Visibility(
-            visible: hasClasses,
-            replacement: Container(),
+          const SizedBox(width: 8),
+          // PDF Button - Only if has classes
+          Expanded(
             child: ElevatedButton.icon(
               icon: const Icon(Icons.download_rounded, size: 16),
               label: const Text(
@@ -712,7 +492,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               },
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -1046,6 +826,40 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                         textAlign: TextAlign.center,
                                                       ),
                                                       const SizedBox(height: 20),
+                                                      if (teacher.consultingHour.isNotEmpty) ...[
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.amber.withOpacity(0.1),
+                                                            borderRadius: BorderRadius.circular(20),
+                                                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                                                          ),
+                                                          child: Column(
+                                                            children: [
+                                                              const Text(
+                                                                "CONSULTING HOURS",
+                                                                style: TextStyle(
+                                                                  fontSize: 11,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: Colors.amber,
+                                                                  letterSpacing: 1.0,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 4),
+                                                              Text(
+                                                                teacher.consultingHour,
+                                                                style: const TextStyle(
+                                                                  fontSize: 13,
+                                                                  color: Colors.black87,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                                textAlign: TextAlign.center,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 20),
+                                                      ],
                                                       _buildTeacherActionButtons(teacher, index, false, roleCategoryColor),
                                                     ],
                                                   )

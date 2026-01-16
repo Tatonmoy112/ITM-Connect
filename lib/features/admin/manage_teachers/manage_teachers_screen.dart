@@ -24,7 +24,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
 
-  final String _imageBbApiKey = 'f517e6ca9abc65dece38e282d13bff53';
+  final String _imageBbApiKey = '4a859feec3e15adfebf576f9bf215b39';
 
   Future<String?> _uploadImageToImageBB(File imageFile) async {
     try {
@@ -251,6 +251,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     final emailController = TextEditingController(text: teacher?.email ?? '');
     final roleController = TextEditingController(text: teacher?.role ?? '');
     final initialController = TextEditingController(text: teacher?.id ?? '');
+    final consultingHourController = TextEditingController(text: teacher?.consultingHour ?? '');
     final imageUrlController = TextEditingController(text: teacher?.imageUrl ?? '');
 
     bool showNameError = false;
@@ -406,6 +407,131 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                                 fillColor: teacher != null ? Colors.grey.shade100 : Colors.transparent,
                               ),
                             ),
+                            const SizedBox(height: 10),
+                            // Consulting Hour (Interactive)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text("Consulting Hours", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                  const SizedBox(height: 8),
+                                  // Day Selection Chips
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    children: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"].map((day) {
+                                      final isSelected = consultingHourController.text.contains(day);
+                                      return FilterChip(
+                                        label: Text(day, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
+                                        selected: isSelected,
+                                        selectedColor: Colors.teal,
+                                        checkmarkColor: Colors.white,
+                                        backgroundColor: Colors.grey.shade100,
+                                        onSelected: (selected) {
+                                          List<String> currentDays = [];
+                                          // Parse existing days from text
+                                          final fullText = consultingHourController.text;
+                                          // Extract time part if exists (assumes standard format: "Days Time")
+                                          String timePart = "";
+                                          
+                                          // Simple regex to split days and time. 
+                                          // Assuming time starts with a digit. e.g. "Sun, Mon 10..."
+                                          final timeIndex = fullText.indexOf(RegExp(r'\d'));
+                                          if (timeIndex != -1) {
+                                            timePart = fullText.substring(timeIndex).trim();
+                                          }
+
+                                          // Rebuild days list
+                                          final dayList = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
+                                          for (var d in dayList) {
+                                            if (fullText.contains(d) && (selected || d != day)) {
+                                              currentDays.add(d);
+                                            } else if (d == day && selected) {
+                                               currentDays.add(d); 
+                                            }
+                                          }
+                                          // Ensure "day" isn't duplicated if logic above missed it
+                                          if (selected && !currentDays.contains(day)) currentDays.add(day);
+                                          if (!selected && currentDays.contains(day)) currentDays.remove(day);
+
+                                          // Sort days to keep order
+                                          currentDays.sort((a, b) => dayList.indexOf(a).compareTo(dayList.indexOf(b)));
+                                          
+                                          String daysStr = currentDays.join(", ");
+                                          if (timePart.isEmpty) timePart = "10:00 AM - 12:00 PM"; // Default if missing
+                                          
+                                          setModalState(() {
+                                            consultingHourController.text = "$daysStr $timePart";
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Time Picker Row
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          consultingHourController.text.isEmpty 
+                                          ? "Select Days & Time" 
+                                          : (consultingHourController.text.contains(RegExp(r'\d')) 
+                                              ? consultingHourController.text.substring(consultingHourController.text.indexOf(RegExp(r'\d'))) 
+                                              : "Select Time"),
+                                          style: const TextStyle(fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                           final start = await showTimePicker(
+                                            context: context,
+                                            initialTime: const TimeOfDay(hour: 10, minute: 0),
+                                            helpText: 'START TIME',
+                                          );
+                                          if (start == null) return;
+                                          if (!context.mounted) return;
+
+                                          final end = await showTimePicker(
+                                            context: context,
+                                            initialTime: const TimeOfDay(hour: 12, minute: 0),
+                                            helpText: 'END TIME',
+                                          );
+                                          if (end == null) return;
+                                          if (!context.mounted) return;
+
+                                          final localizations = MaterialLocalizations.of(context);
+                                          final s = localizations.formatTimeOfDay(start, alwaysUse24HourFormat: false);
+                                          final e = localizations.formatTimeOfDay(end, alwaysUse24HourFormat: false);
+                                          
+                                          // Update text preserving days
+                                          String current = consultingHourController.text;
+                                          String daysPart = "";
+                                          final timeIdx = current.indexOf(RegExp(r'\d'));
+                                          if (timeIdx != -1) {
+                                            daysPart = current.substring(0, timeIdx).trim();
+                                          } else {
+                                            daysPart = current.trim(); // Assume all days
+                                          }
+                                          
+                                          setModalState(() {
+                                            consultingHourController.text = "$daysPart $s - $e".trim();
+                                          });
+                                        },
+                                        child: const Text("Change Time"),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             // Photo Upload Section
                             Column(
@@ -547,6 +673,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                                   final email = emailController.text.trim();
                                   final role = roleController.text.trim();
                                   final initial = initialController.text.trim().toUpperCase();
+                                  final consultingHour = consultingHourController.text.trim();
                                   final imageUrl = imageUrlController.text.trim();
 
                                   setModalState(() {
@@ -762,6 +889,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                           email: email,
                           role: role,
                           imageUrl: imageUrl,
+                          consultingHour: consultingHour,
                         );
                         if (mounted) {
                           Navigator.pop(context);

@@ -6,6 +6,7 @@ class Teacher {
   final String imageUrl;
   // Optional: teacherInitial stored in Firestore (e.g. "TAT")
   final String teacherInitial;
+  final String consultingHour;
 
   Teacher({
     required this.id,
@@ -14,5 +15,6 @@ class Teacher {
     required this.role,
     required this.imageUrl,
     this.teacherInitial = '',
+    this.consultingHour = '',
   });
 }

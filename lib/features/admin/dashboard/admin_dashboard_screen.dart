@@ -5,7 +5,10 @@ import '../../../widgets/admin_app_layout.dart';
 import '../manage_teachers/manage_teachers_screen.dart';
 import '../manage_notices/manage_notices_screen.dart';
 import '../manage_routines/manage_routines_screen.dart';
+import '../manage_exam_routines/manage_exam_routines_screen.dart';
 import '../feedback/manage_feedback_screen.dart';
+import '../manage_news/manage_news_screen.dart';
+
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -18,7 +21,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = -1; // -1 means dashboard welcome page (no bottom nav selected)
 
   final List<Widget> _pages = [
-    const _WelcomeDashboardCard(),
+    // We pass a placeholder function here initially, but we will fix it in build
+    const SizedBox(), 
     const ManageTeacherScreen(),
     const ManageNoticesScreen(),
     const ManageRoutineScreen(),
@@ -31,10 +35,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
-  @override
   Widget build(BuildContext context) {
-    final Widget currentBody =
-    _currentIndex == -1 ? _pages[0] : _pages[_currentIndex + 1];
+    // Inject the callback for the welcome card
+    final Widget currentBody = _currentIndex == -1 
+        ? _WelcomeDashboardCard(onNavTap: _onNavTap) 
+        : _pages[_currentIndex + 1];
 
     return AdminAppLayout(
       currentIndex: _currentIndex,
@@ -47,7 +52,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 }
 
 class _WelcomeDashboardCard extends StatefulWidget {
-  const _WelcomeDashboardCard();
+  final Function(int) onNavTap;
+  const _WelcomeDashboardCard({required this.onNavTap});
 
   @override
   State<_WelcomeDashboardCard> createState() => _WelcomeDashboardCardState();
@@ -197,6 +203,7 @@ class _WelcomeDashboardCardState extends State<_WelcomeDashboardCard>
                         isMobile,
                         isTablet,
                         infoRowSpacing,
+                        onTap: () => widget.onNavTap(0),
                       ),
                       SizedBox(height: infoRowSpacing),
                       _infoRow(
@@ -206,6 +213,7 @@ class _WelcomeDashboardCardState extends State<_WelcomeDashboardCard>
                         isMobile,
                         isTablet,
                         infoRowSpacing,
+                        onTap: () => widget.onNavTap(1),
                       ),
                       SizedBox(height: infoRowSpacing),
                       _infoRow(
@@ -215,8 +223,40 @@ class _WelcomeDashboardCardState extends State<_WelcomeDashboardCard>
                         isMobile,
                         isTablet,
                         infoRowSpacing,
+                        onTap: () => widget.onNavTap(2),
                       ),
                       SizedBox(height: infoRowSpacing),
+                       _infoRow(
+                        Icons.event_note,
+                        'Exam Routines',
+                        'Schedule exams and manage dates.',
+                        isMobile,
+                        isTablet,
+                        infoRowSpacing,
+                        onTap: () {
+                           Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (_) => const ManageExamRoutineScreen())
+                          );
+                        },
+                      ),
+                      SizedBox(height: infoRowSpacing),
+                      _infoRow(
+                        Icons.newspaper,
+                        'News',
+                        'Manage news & announcements.',
+                        isMobile,
+                        isTablet,
+                        infoRowSpacing,
+                        onTap: () {
+                           Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (_) => const ManageNewsScreen())
+                          );
+                        },
+                      ),
+                      SizedBox(height: infoRowSpacing),
+
                       _infoRow(
                         Icons.feedback,
                         'Feedback',
@@ -224,6 +264,7 @@ class _WelcomeDashboardCardState extends State<_WelcomeDashboardCard>
                         isMobile,
                         isTablet,
                         infoRowSpacing,
+                        onTap: () => widget.onNavTap(3),
                       ),
                     ],
                   ),
@@ -242,58 +283,68 @@ class _WelcomeDashboardCardState extends State<_WelcomeDashboardCard>
     String subtitle,
     bool isMobile,
     bool isTablet,
-    double spacing,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+    double spacing, {
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.teal.withOpacity(0.1), width: 1),
-      ),
-      padding: EdgeInsets.all(isMobile ? 12 : (isTablet ? 14 : 16)),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.teal.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            padding: EdgeInsets.all(isMobile ? 8 : 10),
-            child: Icon(
-              icon,
-              color: Colors.teal.shade600,
-              size: isMobile ? 20 : 24,
-            ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.teal.withOpacity(0.1), width: 1),
           ),
-          SizedBox(width: isMobile ? 10 : 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: isMobile ? 13.0 : (isTablet ? 14.0 : 15.0),
-                    color: Colors.black87,
-                    letterSpacing: 0.3,
-                  ),
+          padding: EdgeInsets.all(isMobile ? 12 : (isTablet ? 14 : 16)),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.teal.withOpacity(0.15),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: isMobile ? 11.0 : (isTablet ? 12.0 : 13.0),
-                    color: Colors.black54,
-                    letterSpacing: 0.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                padding: EdgeInsets.all(isMobile ? 8 : 10),
+                child: Icon(
+                  icon,
+                  color: Colors.teal.shade600,
+                  size: isMobile ? 20 : 24,
                 ),
-              ],
-            ),
+              ),
+              SizedBox(width: isMobile ? 10 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isMobile ? 13.0 : (isTablet ? 14.0 : 15.0),
+                        color: Colors.black87,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: isMobile ? 11.0 : (isTablet ? 12.0 : 13.0),
+                        color: Colors.black54,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null)
+                 Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400)
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
