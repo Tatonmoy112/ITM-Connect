@@ -369,6 +369,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         routines: teacherRoutines,
         title: "Teacher Full Week Routine",
         subtitle: "${teacher.name} (${teacher.role})",
+        departmentName: "Information Technology & Management",
         teacherName: teacher.name,
         teacherRole: teacher.role,
         consultingHour: teacher.consultingHour,
@@ -1287,3 +1288,4 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
     );
   }
 }
+// Bump for recompile

@@ -10,6 +10,8 @@ import 'package:csv/csv.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:itm_connect/models/batch.dart';
+import 'package:itm_connect/services/batch_service.dart';
 
 class ManageRoutineScreen extends StatefulWidget {
   const ManageRoutineScreen({super.key});
@@ -29,6 +31,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
   bool showDeleteBatchSection = false;  // Show/hide delete batch section
 
   final RoutineService _routineService = RoutineService();
+  final BatchService _batchService = BatchService();
 
   final TextEditingController _batchController = TextEditingController();
 
@@ -793,7 +796,96 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
     return '${selectedBatch.trim().toUpperCase()}_${_shortDay(selectedDay)}';
   }
 
-  void _addBatch() {
+  Future<BatchInfo?> _showBatchInfoDialog(String batchId, {BatchInfo? existingInfo}) async {
+    final sessionController = TextEditingController(text: existingInfo?.session);
+    final advisorController = TextEditingController(text: existingInfo?.advisorName);
+    final studentsController = TextEditingController(text: existingInfo?.totalStudents);
+    
+    return showDialog<BatchInfo>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.teal),
+            const SizedBox(width: 10),
+            Text('Batch Details ($batchId)'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter additional information for this batch to be displayed in the Routine PDF.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: sessionController,
+                decoration: InputDecoration(
+                  labelText: 'Session',
+                  hintText: 'e.g. Fall 2025',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: advisorController,
+                decoration: InputDecoration(
+                  labelText: 'Advisor Name',
+                  hintText: 'e.g. Dr. John Doe',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.person_outline, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: studentsController,
+                decoration: InputDecoration(
+                  labelText: 'Total Students',
+                  hintText: 'e.g. 45',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.group_outlined, size: 20),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                BatchInfo(
+                  id: batchId,
+                  session: sessionController.text.trim(),
+                  advisorName: advisorController.text.trim(),
+                  totalStudents: studentsController.text.trim(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save Details'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addBatch() async {
     final newBatch = _batchController.text.trim();
     
     // Validate: check if batch is empty or already exists
@@ -815,15 +907,149 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
       }
       return;
     }
+
+    // Step 1: Prompt for Batch Information
+    final batchInfo = await _showBatchInfoDialog(newBatch);
     
-    final docId = '${newBatch}_${_shortDay(selectedDay)}';
-    _routineService.createEmptyRoutine(docId, newBatch, selectedDay).then((_) {
-      _batchController.clear();
-    }).catchError((e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error creating batch: ${e.toString()}')));
+    // Step 2: Create Routine and Batch Info
+    try {
+      final docId = '${newBatch}_${_shortDay(selectedDay)}';
+      
+      // Create Empty Routine
+      await _routineService.createEmptyRoutine(docId, newBatch, selectedDay);
+      
+      // Save Batch Info if provided (or defaults)
+      if (batchInfo != null) {
+        await _batchService.setBatchInfo(batchInfo);
+      } else {
+        // Even if skipped, we initialize with name/ID for consistency
+        await _batchService.setBatchInfo(BatchInfo(id: newBatch));
       }
-    });
+
+      if (mounted) {
+        _batchController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Batch $newBatch created successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating batch: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Widget _buildBatchInfoCard() {
+    if (selectedBatch.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<BatchInfo?>(
+      stream: _batchService.streamBatchInfo(selectedBatch),
+      builder: (context, snapshot) {
+        final info = snapshot.data ?? BatchInfo(id: selectedBatch);
+        
+        final bool isNotInitialized = snapshot.data == null;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.teal.shade100, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.teal.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.teal, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Batch Information ($selectedBatch)',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final updated = await _showBatchInfoDialog(selectedBatch, existingInfo: info);
+                      if (updated != null) {
+                        await _batchService.setBatchInfo(updated);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Batch info updated!')),
+                          );
+                        }
+                      }
+                    },
+                    icon: Icon(isNotInitialized ? Icons.add_circle_outline : Icons.edit_outlined, size: 16),
+                    label: Text(isNotInitialized ? 'Add Details' : 'Edit Details'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.teal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 20),
+              Wrap(
+                spacing: 24,
+                runSpacing: 12,
+                children: [
+                  _infoItem(Icons.calendar_today, 'Session', info.session),
+                  _infoItem(Icons.person_outline, 'Advisor', info.advisorName),
+                  _infoItem(Icons.group_outlined, 'Students', info.totalStudents),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _infoItem(IconData icon, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: Colors.grey),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value.isEmpty ? 'Not set' : value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: value.isEmpty ? Colors.grey.shade400 : Colors.black87,
+          ),
+        ),
+      ],
+    );
   }
 
   void _deleteBatch(String batch) {
@@ -1258,6 +1484,9 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Batch Info Card
+                      _buildBatchInfoCard(),
+                      
                       // Show entire Manage Batches section only when no batch is selected
                       if (selectedBatch.isEmpty) ...[
                         Row(

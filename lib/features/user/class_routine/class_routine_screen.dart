@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:itm_connect/models/routine.dart';
 import 'package:itm_connect/services/routine_service.dart';
 import 'package:itm_connect/services/pdf_routine_service.dart';
+import 'package:itm_connect/services/batch_service.dart';
+import 'package:itm_connect/models/batch.dart';
 
 class ClassRoutineScreen extends StatefulWidget {
   const ClassRoutineScreen({super.key});
@@ -20,6 +23,9 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
 
   final List<String> days = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
   final RoutineService _routineService = RoutineService();
+  final BatchService _batchService = BatchService();
+  List<String> _allBatches = [];
+  StreamSubscription? _batchSubscription;
 
   // Helper method to extract start time for sorting
   String _extractStartTime(String timeRange) {
@@ -201,11 +207,16 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
         return;
       }
 
+      // Fetch batch info from database
+      final batchInfo = await _batchService.getBatchInfo(batch);
+
       await PdfRoutineService.generateRoutinePdf(
         routines: batchRoutines,
         title: "Full Week Class Routine",
         subtitle: "Batch: ${batch.toUpperCase()}",
         batchName: batch,
+        departmentName: "Information Technology & Management",
+        batchInfo: batchInfo,
       );
 
     } catch (e) {
@@ -228,6 +239,36 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
     } else {
       selectedDay = days.first;
     }
+    _initBatchSuggestions();
+  }
+
+  void _initBatchSuggestions() {
+    // Combine batches from both Routines and Batch Metadata for maximum coverage
+    _routineService.streamAllBatches().listen((batches) {
+      if (mounted) {
+        _updateAllBatches(batches);
+      }
+    });
+    
+    _batchService.streamAllBatchIds().listen((batches) {
+      if (mounted) {
+        _updateAllBatches(batches);
+      }
+    });
+  }
+
+  void _updateAllBatches(List<String> newBatches) {
+    setState(() {
+      final combined = {..._allBatches, ...newBatches};
+      _allBatches = combined.toList()..sort();
+      debugPrint("Updated suggestions: ${_allBatches.length} batches loaded.");
+    });
+  }
+
+  @override
+  void dispose() {
+    _batchSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -329,7 +370,7 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            // Batch Input
+                            // Batch Input with Autocomplete
                             Card(
                               color: Colors.white,
                               elevation: 2,
@@ -337,16 +378,72 @@ class _ClassRoutineScreenState extends State<ClassRoutineScreen> {
                                   borderRadius: BorderRadius.circular(12)),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                child: TextField(
-                                  keyboardType: TextInputType.text,
-                                  textCapitalization: TextCapitalization.characters,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: 'Enter Batch (e.g. 61st)',
-                                    prefixIcon: Icon(Icons.group),
-                                  ),
-                                  onChanged: (value) {
-                                    setState(() => selectedBatch = value.trim().isNotEmpty ? value.trim() : null);
+                                child: Autocomplete<String>(
+                                  optionsBuilder: (TextEditingValue textEditingValue) {
+                                    if (textEditingValue.text.isEmpty) {
+                                      return const Iterable<String>.empty();
+                                    }
+                                    final query = textEditingValue.text.toUpperCase().trim();
+                                    return _allBatches.where((String option) {
+                                      return option.toUpperCase().contains(query);
+                                    });
+                                  },
+                                  onSelected: (String selection) {
+                                    setState(() {
+                                      selectedBatch = selection;
+                                    });
+                                  },
+                                  fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+                                    return TextField(
+                                      controller: textController,
+                                      focusNode: focusNode,
+                                      keyboardType: TextInputType.text,
+                                      textCapitalization: TextCapitalization.characters,
+                                      decoration: const InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: 'Enter Batch (e.g. 61st)',
+                                        prefixIcon: Icon(Icons.group),
+                                      ),
+                                      onChanged: (value) {
+                                        // Update selectedBatch for the PDF button visibility
+                                        setState(() {
+                                          selectedBatch = value.trim().isNotEmpty ? value.trim() : null;
+                                        });
+                                      },
+                                    );
+                                  },
+                                  optionsViewBuilder: (context, onSelected, options) {
+                                    return Align(
+                                      alignment: Alignment.topLeft,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 4.0),
+                                        child: Material(
+                                          elevation: 8,
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            width: 300,
+                                            constraints: const BoxConstraints(maxHeight: 250),
+                                            child: ListView.separated(
+                                              padding: EdgeInsets.zero,
+                                              shrinkWrap: true,
+                                              itemCount: options.length,
+                                              separatorBuilder: (context, index) => const Divider(height: 1),
+                                              itemBuilder: (BuildContext context, int index) {
+                                                final String option = options.elementAt(index);
+                                                return ListTile(
+                                                  visualDensity: VisualDensity.compact,
+                                                  title: Text(
+                                                    option,
+                                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                                  ),
+                                                  onTap: () => onSelected(option),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
                                   },
                                 ),
                               ),

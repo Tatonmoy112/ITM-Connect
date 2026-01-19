@@ -3,6 +3,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/routine.dart';
+import '../models/batch.dart';
 import 'package:intl/intl.dart';
 
 class PdfRoutineService {
@@ -15,6 +16,8 @@ class PdfRoutineService {
     required String title,
     required String subtitle,
     String? batchName,
+    String? departmentName,
+    BatchInfo? batchInfo,
     String? teacherName,
     String? teacherRole,
     String? consultingHour,
@@ -53,103 +56,160 @@ class PdfRoutineService {
         ),
         header: (pw.Context context) {
           return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              if (logoImage != null)
-                pw.Container(
-                  width: 80,
-                  alignment: pw.Alignment.center,
-                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                "Daffodil International University",
-                style: pw.TextStyle(
-                  color: diuBlue,
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  // Logo on the left
+                  if (logoImage != null)
+                    pw.Container(
+                      width: 90,
+                      child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                    ),
+                  
+                  // Branding on the right
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        "Daffodil International University",
+                        style: pw.TextStyle(
+                          color: diuBlue,
+                          fontSize: 16,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      if (departmentName != null)
+                        pw.Text(
+                          "Department of $departmentName",
+                          style: pw.TextStyle(
+                            color: diuBlue,
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      pw.SizedBox(height: 2),
+                      pw.Container(
+                        height: 2,
+                        width: 150,
+                        color: diuGreen,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 8),
-              pw.Container(
-                height: 1.5,
-                color: diuGreen,
-                width: double.infinity,
-              ),
-              pw.SizedBox(height: 12),
               
-              // Title of the document
-              pw.Text(
-                title.toUpperCase(),
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                  color: diuBlue,
-                  letterSpacing: 1.2,
+              pw.SizedBox(height: 15),
+              
+              // Formal Document Title
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      title.toUpperCase(),
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: diuBlue,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Container(
+                      height: 1,
+                      width: 60,
+                      color: diuGreen,
+                    ),
+                  ],
                 ),
               ),
-              pw.SizedBox(height: 8),
+              
+              pw.SizedBox(height: 15),
 
-              // Profile Information Box (Teacher or Batch)
-              if (teacherName != null || batchName != null) ...[
+              // Profile Information Card (Teacher or Batch)
+              if (teacherName != null || batchName != null)
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                   decoration: pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFFF3F4F6), // Light gray background
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                    border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                    color: PdfColors.white,
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                    border: pw.Border.all(color: diuBlue.shade(0.2), width: 0.8),
                   ),
                   child: pw.Column(
                     children: [
                       pw.Text(
-                        teacherName ?? "Batch: ${batchName?.toUpperCase()}",
+                        teacherName ?? "Class Routine for Batch: ${batchName?.toUpperCase()}",
                         style: pw.TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.black,
+                          color: diuBlue,
                         ),
                       ),
-                      if (teacherRole != null) ...[
-                        pw.SizedBox(height: 2),
-                        pw.Text(
-                          teacherRole,
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            color: PdfColors.grey800,
-                            fontStyle: pw.FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                      if (consultingHour != null && consultingHour.isNotEmpty) ...[
-                        pw.SizedBox(height: 4),
+                      if (batchInfo != null) ...[
+                        pw.SizedBox(height: 8),
                         pw.Row(
-                          mainAxisSize: pw.MainAxisSize.min,
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
                           children: [
-                            pw.Text(
-                              "Consulting Hour: ",
-                              style: pw.TextStyle(
-                                fontSize: 10,
-                                fontWeight: pw.FontWeight.bold,
-                                color: diuBlue,
-                              ),
-                            ),
-                             pw.Text(
-                              consultingHour,
-                              style: const pw.TextStyle(
-                                fontSize: 10,
-                                color: PdfColors.black,
-                              ),
-                            ),
+                            _infoItem("SESSION", batchInfo.session),
+                            _vDivider(),
+                            _infoItem("ADVISOR", batchInfo.advisorName),
+                            if (batchInfo.totalStudents.isNotEmpty) ...[
+                              _vDivider(),
+                              _infoItem("STUDENTS", batchInfo.totalStudents),
+                            ],
                           ],
                         ),
                       ],
+                      if (teacherRole != null || (consultingHour != null && consultingHour.isNotEmpty))
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 6),
+                          child: pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.center,
+                            children: [
+                              if (teacherRole != null)
+                                pw.Text(
+                                  teacherRole.toUpperCase(),
+                                  style: pw.TextStyle(
+                                    fontSize: 8,
+                                    color: PdfColors.grey700,
+                                    fontWeight: pw.FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              if (teacherRole != null && consultingHour != null && consultingHour.isNotEmpty)
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10),
+                                  child: pw.Text("|", style: pw.TextStyle(color: PdfColors.grey400)),
+                                ),
+                              if (consultingHour != null && consultingHour.isNotEmpty)
+                                pw.RichText(
+                                  text: pw.TextSpan(
+                                    children: [
+                                      pw.TextSpan(
+                                        text: "CONSULTING HOUR: ",
+                                        style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: diuBlue),
+                                      ),
+                                      pw.TextSpan(
+                                        text: consultingHour,
+                                        style: pw.TextStyle(fontSize: 8, color: PdfColors.black),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
-              ] else if (subtitle.isNotEmpty) 
-                pw.Text(
-                  subtitle,
-                  style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
+              if (teacherName == null && batchName == null && subtitle.isNotEmpty) 
+                pw.Center(
+                  child: pw.Text(
+                    subtitle,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic),
+                  ),
                 ),
                 
               pw.SizedBox(height: 15),
@@ -181,26 +241,28 @@ class PdfRoutineService {
               // Sort day classes by time
               dayClasses.sort((a, b) => _getMinutes(a['time'] ?? '').compareTo(_getMinutes(b['time'] ?? '')));
 
+              // Day Header with Side Tab Style
               pdfContent.add(
                 pw.Container(
-                  width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  margin: const pw.EdgeInsets.only(top: 15, bottom: 5),
+                  padding: const pw.EdgeInsets.only(left: 8),
                   decoration: const pw.BoxDecoration(
-                    color: diuGreen,
-                    borderRadius: pw.BorderRadius.vertical(top: pw.Radius.circular(4)),
+                    border: pw.Border(
+                      left: pw.BorderSide(color: diuGreen, width: 4),
+                    ),
                   ),
                   child: pw.Text(
                     day.toUpperCase(),
                     style: pw.TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
+                      color: diuBlue,
                     ),
                   ),
                 ),
               );
 
-              final tableHeader = ['Time', 'Course', 'Room', batchName != null ? 'Teacher' : 'Batch'];
+              final tableHeader = ['TIME', 'COURSE NAME & CODE', 'ROOM', batchName != null ? 'TEACHER' : 'BATCH'];
               
               final tableData = dayClasses.map((e) => [
                 formatTo12Hr(e['time'] ?? ''),
@@ -213,26 +275,42 @@ class PdfRoutineService {
                 pw.Table.fromTextArray(
                   headers: tableHeader,
                   data: tableData,
-                  border: pw.TableBorder.all(color: diuBlue, width: 0.5),
                   headerStyle: pw.TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.white,
                   ),
                   headerDecoration: const pw.BoxDecoration(color: diuBlue),
-                  headerPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 5),
-                  cellStyle: const pw.TextStyle(fontSize: 9),
-                  cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 5),
+                  headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black),
+                  cellPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                   cellAlignment: pw.Alignment.centerLeft,
+                  
+                  // Zebra Striping
+                  cellDecoration: (index, data, rowNum) {
+                    if (rowNum == 0) return const pw.BoxDecoration(color: diuBlue);
+                    return pw.BoxDecoration(
+                      color: rowNum % 2 == 0 ? PdfColor.fromInt(0xFFF9FAFB) : PdfColors.white,
+                    );
+                  },
+                  
+                  // Border Styling (Removing vertical borders for corporate look)
+                  border: pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+                    bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+                    left: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+                    right: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+                  ),
+                  
                   columnWidths: {
-                    0: const pw.FlexColumnWidth(2.2),
-                    1: const pw.FlexColumnWidth(4.5),
-                    2: const pw.FlexColumnWidth(0.8),
-                    3: const pw.FlexColumnWidth(1.5),
+                    0: const pw.FlexColumnWidth(2.5),
+                    1: const pw.FlexColumnWidth(5.0),
+                    2: const pw.FlexColumnWidth(1.0),
+                    3: const pw.FlexColumnWidth(2.0),
                   },
                 ),
               );
-              pdfContent.add(pw.SizedBox(height: 12));
+              pdfContent.add(pw.SizedBox(height: 5));
             }
           }
           
@@ -363,5 +441,41 @@ class PdfRoutineService {
       hour = 12;
     }
     return "$hour:${minute.toString().padLeft(2, '0')} $period";
+  }
+
+  static pw.Widget _vDivider() {
+    return pw.Container(
+      height: 10,
+      width: 1,
+      color: PdfColors.grey400,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 15),
+    );
+  }
+
+  static pw.Widget _infoItem(String label, String value) {
+    return pw.Column(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 7,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.grey600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Text(
+          value.isEmpty ? "N/A" : value,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.black,
+          ),
+        ),
+      ],
+    );
   }
 }

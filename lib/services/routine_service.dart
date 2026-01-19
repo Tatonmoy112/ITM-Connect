@@ -43,8 +43,16 @@ class RoutineService {
       final batches = <String>{};
       for (final doc in snap.docs) {
         final data = doc.data();
-        final b = (data['batch'] as String?)?.trim();
-        if (b != null && b.isNotEmpty) batches.add(b);
+        String? b = (data['batch'] as String?)?.trim();
+        
+        // Fallback: extract from document ID if the field is missing/empty
+        if ((b == null || b.isEmpty) && doc.id.contains('_')) {
+          b = doc.id.split('_')[0].trim();
+        }
+        
+        if (b != null && b.isNotEmpty) {
+          batches.add(b.toUpperCase()); // Normalize to uppercase for consistency
+        }
       }
       final list = batches.toList()..sort();
       return list;
@@ -92,7 +100,22 @@ class RoutineService {
         existing = (base['classes'] as List<dynamic>?) ?? [];
       }
       existing.add(newClass.toMap());
-      final updated = {...base, 'classes': existing};
+      
+      // Ensure batch and day are set if this is a new document or missing fields
+      final updated = {
+        ...base,
+        'classes': existing,
+      };
+      
+      // Extract batch and day from ID if not present
+      if (!base.containsKey('batch') || (base['batch'] as String).isEmpty) {
+        if (routineId.contains('_')) {
+          final parts = routineId.split('_');
+          updated['batch'] = parts[0];
+          updated['day'] = parts.sublist(1).join('_');
+        }
+      }
+      
       tx.set(docRef, updated, SetOptions(merge: true));
     });
   }
