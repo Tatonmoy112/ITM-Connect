@@ -827,41 +827,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                                                         textAlign: TextAlign.center,
                                                       ),
                                                       const SizedBox(height: 20),
-                                                      if (teacher.consultingHour.isNotEmpty) ...[
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.amber.withOpacity(0.1),
-                                                            borderRadius: BorderRadius.circular(20),
-                                                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
-                                                          ),
-                                                          child: Column(
-                                                            children: [
-                                                              const Text(
-                                                                "CONSULTING HOURS",
-                                                                style: TextStyle(
-                                                                  fontSize: 11,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  color: Colors.amber,
-                                                                  letterSpacing: 1.0,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(height: 4),
-                                                              Text(
-                                                                teacher.consultingHour,
-                                                                style: const TextStyle(
-                                                                  fontSize: 13,
-                                                                  color: Colors.black87,
-                                                                  fontWeight: FontWeight.w600,
-                                                                ),
-                                                                textAlign: TextAlign.center,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 20),
-                                                      ],
-                                                      _buildTeacherActionButtons(teacher, index, false, roleCategoryColor),
+                                                       _buildTeacherActionButtons(teacher, index, false, roleCategoryColor),
                                                     ],
                                                   )
                                                 : Row(

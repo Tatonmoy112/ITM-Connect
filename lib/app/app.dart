@@ -20,6 +20,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorSchemeSeed: Colors.green,
         useMaterial3: true,
+        fontFamily: 'TTInterphasesPro',
       ),
       home: const LandingScreen(),
       routes: {

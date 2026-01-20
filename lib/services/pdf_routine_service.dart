@@ -48,7 +48,7 @@ class PdfRoutineService {
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+        margin: const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 25),
         theme: pw.ThemeData.withFont(
           base: fontRegular,
           bold: fontBold,
@@ -64,7 +64,7 @@ class PdfRoutineService {
                   // Logo on the left
                   if (logoImage != null)
                     pw.Container(
-                      width: 90,
+                      width: 70,
                       child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                     ),
                   
@@ -76,7 +76,7 @@ class PdfRoutineService {
                         "Daffodil International University",
                         style: pw.TextStyle(
                           color: diuBlue,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: pw.FontWeight.bold,
                         ),
                       ),
@@ -85,11 +85,11 @@ class PdfRoutineService {
                           "Department of $departmentName",
                           style: pw.TextStyle(
                             color: diuBlue,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
-                      pw.SizedBox(height: 2),
+                      pw.SizedBox(height: 1),
                       pw.Container(
                         height: 2,
                         width: 150,
@@ -100,7 +100,7 @@ class PdfRoutineService {
                 ],
               ),
               
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
               
               // Formal Document Title
               pw.Center(
@@ -109,10 +109,10 @@ class PdfRoutineService {
                     pw.Text(
                       title.toUpperCase(),
                       style: pw.TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
                         color: diuBlue,
-                        letterSpacing: 1.5,
+                        letterSpacing: 1.2,
                       ),
                     ),
                     pw.SizedBox(height: 2),
@@ -125,13 +125,13 @@ class PdfRoutineService {
                 ),
               ),
               
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
 
               // Profile Information Card (Teacher or Batch)
               if (teacherName != null || batchName != null)
                 pw.Container(
                   width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                   decoration: pw.BoxDecoration(
                     color: PdfColors.white,
                     borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
@@ -142,13 +142,13 @@ class PdfRoutineService {
                       pw.Text(
                         teacherName ?? "Class Routine for Batch: ${batchName?.toUpperCase()}",
                         style: pw.TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: pw.FontWeight.bold,
                           color: diuBlue,
                         ),
                       ),
                       if (batchInfo != null) ...[
-                        pw.SizedBox(height: 8),
+                        pw.SizedBox(height: 5),
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.center,
                           children: [
@@ -212,7 +212,7 @@ class PdfRoutineService {
                   ),
                 ),
                 
-              pw.SizedBox(height: 15),
+              pw.SizedBox(height: 8),
             ],
           );
         },
@@ -244,7 +244,7 @@ class PdfRoutineService {
               // Day Header with Side Tab Style
               pdfContent.add(
                 pw.Container(
-                  margin: const pw.EdgeInsets.only(top: 15, bottom: 5),
+                  margin: const pw.EdgeInsets.only(top: 10, bottom: 4),
                   padding: const pw.EdgeInsets.only(left: 8),
                   decoration: const pw.BoxDecoration(
                     border: pw.Border(
@@ -254,7 +254,7 @@ class PdfRoutineService {
                   child: pw.Text(
                     day.toUpperCase(),
                     style: pw.TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: pw.FontWeight.bold,
                       color: diuBlue,
                     ),
@@ -276,14 +276,14 @@ class PdfRoutineService {
                   headers: tableHeader,
                   data: tableData,
                   headerStyle: pw.TextStyle(
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.white,
                   ),
                   headerDecoration: const pw.BoxDecoration(color: diuBlue),
-                  headerPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                  cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black),
-                  cellPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  headerPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                  cellStyle: const pw.TextStyle(fontSize: 7.5, color: PdfColors.black),
+                  cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
                   cellAlignment: pw.Alignment.centerLeft,
                   
                   // Zebra Striping
@@ -303,14 +303,14 @@ class PdfRoutineService {
                   ),
                   
                   columnWidths: {
-                    0: const pw.FlexColumnWidth(2.5),
-                    1: const pw.FlexColumnWidth(5.0),
-                    2: const pw.FlexColumnWidth(1.0),
-                    3: const pw.FlexColumnWidth(2.0),
+                    0: const pw.FlexColumnWidth(2.2),
+                    1: const pw.FlexColumnWidth(5.5),
+                    2: const pw.FlexColumnWidth(0.8),
+                    3: const pw.FlexColumnWidth(1.5),
                   },
                 ),
               );
-              pdfContent.add(pw.SizedBox(height: 5));
+              pdfContent.add(pw.SizedBox(height: 3));
             }
           }
           

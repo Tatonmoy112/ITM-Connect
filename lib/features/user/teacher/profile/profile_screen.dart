@@ -136,6 +136,61 @@ class ProfileScreen extends StatelessWidget {
 
                   const SizedBox(height: 30),
 
+                  // ⏰ Consulting Hours
+                  if (teacher.consultingHour.isNotEmpty)
+                    Animate(
+                      effects: [FadeEffect(), SlideEffect(begin: Offset(0, 0.1))],
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            )
+                          ],
+                          border: Border.all(color: Colors.amber.shade700.withOpacity(0.3), width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.access_time_filled, color: Colors.amber.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Consulting Hours',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                teacher.consultingHour,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 30),
+
                   // 🔁 View Routine Button with white icon and text
                   Animate(
                     effects: [FadeEffect(), SlideEffect(begin: Offset(0, 0.05))],
