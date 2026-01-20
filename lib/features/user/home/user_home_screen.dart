@@ -213,7 +213,7 @@ class _ITMDepartmentHomeBodyState extends State<ITMDepartmentHomeBody> {
                             const SizedBox(height: 8),
                             // Name
                             const Text(
-                              'Ms. Nusrat Jahan',
+                              'Dr. Nusrat Jahan',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,

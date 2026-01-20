@@ -66,6 +66,11 @@ flutter:
     - assets/animations/intro.json
     - assets/itm-connect-credentials.json
 
+  fonts:
+    - family: TTInterphasesPro
+      fonts:
+        - asset: assets/fonts/TTInterphasesPro-Regular.ttf
+
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true

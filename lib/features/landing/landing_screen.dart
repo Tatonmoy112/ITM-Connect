@@ -141,7 +141,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
                     FadeTransition(
                       opacity: _cardController,
                       child: Text(
-                        'Information Technology & Management',
+                        'ITM Connect',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,
