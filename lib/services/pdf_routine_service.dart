@@ -20,7 +20,9 @@ class PdfRoutineService {
     BatchInfo? batchInfo,
     String? teacherName,
     String? teacherRole,
-    String? consultingHour,
+    String? teacherEmail,
+    String? teacherInitial,
+    List<String>? consultingHours,
   }) async {
     final fontRegular = await PdfGoogleFonts.poppinsRegular();
     final fontBold = await PdfGoogleFonts.poppinsBold();
@@ -131,76 +133,94 @@ class PdfRoutineService {
               if (teacherName != null || batchName != null)
                 pw.Container(
                   width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  padding: const pw.EdgeInsets.all(12),
                   decoration: pw.BoxDecoration(
                     color: PdfColors.white,
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    border: pw.Border.all(color: diuBlue.shade(0.2), width: 0.8),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                    border: pw.Border.all(color: diuBlue.shade(0.1), width: 0.5),
                   ),
                   child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(
-                        teacherName ?? "Class Routine for Batch: ${batchName?.toUpperCase()}",
-                        style: pw.TextStyle(
-                          fontSize: 11,
-                          fontWeight: pw.FontWeight.bold,
-                          color: diuBlue,
-                        ),
-                      ),
-                      if (batchInfo != null) ...[
-                        pw.SizedBox(height: 5),
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.center,
-                          children: [
-                            _infoItem("SESSION", batchInfo.session),
-                            _vDivider(),
-                            _infoItem("ADVISOR", batchInfo.advisorName),
-                            if (batchInfo.totalStudents.isNotEmpty) ...[
-                              _vDivider(),
-                              _infoItem("STUDENTS", batchInfo.totalStudents),
-                            ],
-                          ],
-                        ),
-                      ],
-                      if (teacherRole != null || (consultingHour != null && consultingHour.isNotEmpty))
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 6),
-                          child: pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.center,
-                            children: [
-                              if (teacherRole != null)
+                      // Header Section: Name and Role
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Expanded(
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
                                 pw.Text(
-                                  teacherRole.toUpperCase(),
+                                  teacherName ?? "BATCH: ${batchName?.toUpperCase()}",
                                   style: pw.TextStyle(
-                                    fontSize: 8,
-                                    color: PdfColors.grey700,
+                                    fontSize: 13,
                                     fontWeight: pw.FontWeight.bold,
-                                    letterSpacing: 0.5,
+                                    color: diuBlue,
                                   ),
                                 ),
-                              if (teacherRole != null && consultingHour != null && consultingHour.isNotEmpty)
-                                pw.Padding(
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10),
-                                  child: pw.Text("|", style: pw.TextStyle(color: PdfColors.grey400)),
-                                ),
-                              if (consultingHour != null && consultingHour.isNotEmpty)
-                                pw.RichText(
-                                  text: pw.TextSpan(
-                                    children: [
-                                      pw.TextSpan(
-                                        text: "CONSULTING HOUR: ",
-                                        style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: diuBlue),
-                                      ),
-                                      pw.TextSpan(
-                                        text: consultingHour,
-                                        style: pw.TextStyle(fontSize: 8, color: PdfColors.black),
-                                      ),
-                                    ],
+                                if (teacherRole != null || batchInfo != null)
+                                  pw.Text(
+                                    (teacherRole ?? "Session: ${batchInfo?.session}").toUpperCase(),
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      color: PdfColors.grey600,
+                                      fontWeight: pw.FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                          if (teacherInitial != null || batchName != null)
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: pw.BoxDecoration(
+                                color: diuBlue,
+                                borderRadius: pw.BorderRadius.circular(3),
+                              ),
+                              child: pw.Column(
+                                children: [
+                                  pw.Text(
+                                    teacherInitial != null ? "INITIAL" : "BATCH",
+                                    style: pw.TextStyle(fontSize: 6, color: PdfColors.white, fontWeight: pw.FontWeight.bold),
+                                  ),
+                                  pw.Text(
+                                    teacherInitial ?? batchName!,
+                                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                      
+                      pw.SizedBox(height: 8),
+                      pw.Container(height: 0.5, width: double.infinity, color: PdfColors.grey200),
+                      pw.SizedBox(height: 8),
+
+                      // Details Section
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          if (teacherEmail != null)
+                            pw.Expanded(
+                              flex: 2,
+                              child: _detailItem("EMAIL ADDRESS", teacherEmail),
+                            ),
+                          if (batchInfo != null) ...[
+                            pw.Expanded(child: _detailItem("SESSION", batchInfo.session)),
+                            pw.Expanded(child: _detailItem("ADVISOR", batchInfo.advisorName)),
+                            if (batchInfo.totalStudents.isNotEmpty)
+                              pw.Expanded(child: _detailItem("STUDENTS", batchInfo.totalStudents)),
+                          ],
+                          if (consultingHours != null && consultingHours.isNotEmpty)
+                            pw.Expanded(
+                              flex: 3,
+                              child: _detailItem("CONSULTING HOURS", consultingHours.join('\n')),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -452,25 +472,25 @@ class PdfRoutineService {
     );
   }
 
-  static pw.Widget _infoItem(String label, String value) {
+  static pw.Widget _detailItem(String label, String value) {
     return pw.Column(
       mainAxisSize: pw.MainAxisSize.min,
-      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
           label,
           style: pw.TextStyle(
-            fontSize: 7,
+            fontSize: 6.5,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.grey600,
             letterSpacing: 0.5,
           ),
         ),
-        pw.SizedBox(height: 2),
+        pw.SizedBox(height: 1),
         pw.Text(
           value.isEmpty ? "N/A" : value,
           style: pw.TextStyle(
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.black,
           ),

@@ -372,7 +372,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         departmentName: "Information Technology & Management",
         teacherName: teacher.name,
         teacherRole: teacher.role,
-        consultingHour: teacher.consultingHour,
+        teacherEmail: teacher.email,
+        teacherInitial: teacher.teacherInitial,
+        consultingHours: teacher.consultingHours,
       );
 
     } catch (e) {
@@ -1155,12 +1157,9 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
       );
     }
 
-    if (routines.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(child: Text('No classes scheduled for this day.')),
-      );
-    }
+    // Find consulting hours for this day
+    final dayShort = _currentDay.substring(0, 3);
+    final consultingForDay = widget.teacher.consultingHours.where((slot) => slot.startsWith(dayShort)).toList();
 
     // Create indexed list to maintain correspondence between routines and doc IDs
     final indexedRoutines = routines.asMap().entries.toList();
@@ -1174,7 +1173,44 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: indexedRoutines.map((entry) {
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (consultingForDay.isNotEmpty) ...[
+          const Text(
+            'Consulting Hours:',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          ...consultingForDay.map((slot) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.access_time_filled, size: 14, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text(
+                  slot.replaceFirst(dayShort, '').trim(),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                ),
+              ],
+            ),
+          )),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 12),
+        ],
+        if (routines.isEmpty)
+           const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: Text('No classes scheduled for this day.')),
+          )
+        else
+          ...indexedRoutines.map((entry) {
         final index = entry.key;
         final c = entry.value;
         
@@ -1251,7 +1287,8 @@ class _TeacherRoutineDetailsSheetState extends State<TeacherRoutineDetailsSheet>
           ),
         );
       }).toList(),
-    );
-  }
+    ],
+  );
+}
 }
 // Bump for recompile

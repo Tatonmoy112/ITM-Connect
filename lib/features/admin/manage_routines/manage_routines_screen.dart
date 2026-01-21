@@ -116,48 +116,19 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
   /// timeRange1 and timeRange2 are [startMinutes, endMinutes]
   /// Check if a teacher has a time conflict across ALL routines on the SAME DAY
   /// Returns a conflict message if found, null if no conflict
+  /// Uses RoutineService for comprehensive conflict checking
   Future<String?> _checkGlobalTimeConflict(
     String teacherInitial,
     String timeRange,
-    String day,  // The day to check conflicts for
-    {String? excludeDocId}  // Document ID to exclude (for edit case)
+    String day,
+    {String? excludeDocId}
   ) async {
-    try {
-      final newTimeRange = _parseTimeRange(timeRange);
-      if (newTimeRange == null) return null;
-
-      // Get all routines from Firestore using a query
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('routines')
-          .get();
-
-      // Check each routine for conflicts
-      for (final doc in querySnapshot.docs) {
-        final routine = Routine.fromMap(doc.id, doc.data());
-        
-        // Skip the current routine being edited
-        if (excludeDocId != null && routine.id == excludeDocId) continue;
-
-        // Only check routines for the same day
-        if (routine.day != day) continue;
-
-        // Check each class in this routine
-        for (final routineClass in routine.classes) {
-          if (routineClass.teacherInitial == teacherInitial) {
-            final existingTimeRange = _parseTimeRange(routineClass.time);
-
-            if (existingTimeRange != null && _timesOverlap(newTimeRange, existingTimeRange)) {
-              return '${teacherInitial} already has a class on ${routine.day} from ${routineClass.time}';
-            }
-          }
-        }
-      }
-
-      return null;  // No conflict found
-    } catch (e) {
-      print('Error checking global time conflict: $e');
-      return null;
-    }
+    return _routineService.checkTeacherAvailability(
+      teacherInitial: teacherInitial,
+      day: day,
+      timeRange: timeRange,
+      excludeDocId: excludeDocId,
+    );
   }
 
   bool _timesOverlap(List<int> timeRange1, List<int> timeRange2) {
@@ -389,28 +360,43 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen>
                               ),
                             ),
                             const SizedBox(height: 10),
-                            // Time with Clock Icon
-                            TextField(
-                              controller: time,
-                              readOnly: true,
-                              onTap: () async {
-                                final selectedTime = await showTimeRangePicker(context);
-                                if (selectedTime != null) {
-                                  setModalState(() {
-                                    time.text = selectedTime;
-                                  });
-                                }
-                              },
-                              decoration: InputDecoration(
-                                labelText: 'Time (Click to Select)',
-                                prefixIcon: const Icon(Icons.schedule),
-                                suffixIcon: const Icon(Icons.access_time, color: Colors.teal),
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                errorText: showTimeError ? 'Required' : null,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            // Time Slot Dropdown
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButton<String>(
+                                      value: RoutineService.classSlots.contains(time.text) ? time.text : null,
+                                      hint: const Text('Select Time Slot'),
+                                      isExpanded: true,
+                                      underline: const SizedBox(),
+                                      items: RoutineService.classSlots.map((slot) {
+                                        return DropdownMenuItem(value: slot, child: Text(slot, style: const TextStyle(fontSize: 14)));
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setModalState(() {
+                                            time.text = val;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            if (showTimeError)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 12, top: 4),
+                                child: Text('Required', style: TextStyle(color: Colors.red, fontSize: 12)),
+                              ),
                           ],
                         ),
                       ),

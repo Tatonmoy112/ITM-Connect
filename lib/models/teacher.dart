@@ -6,7 +6,10 @@ class Teacher {
   final String imageUrl;
   // Optional: teacherInitial stored in Firestore (e.g. "TAT")
   final String teacherInitial;
-  final String consultingHour;
+  final List<String> consultingHours;
+  
+  // For backward compatibility
+  String get consultingHour => consultingHours.isNotEmpty ? consultingHours.join(', ') : '';
 
   Teacher({
     required this.id,
@@ -15,6 +18,6 @@ class Teacher {
     required this.role,
     required this.imageUrl,
     this.teacherInitial = '',
-    this.consultingHour = '',
+    this.consultingHours = const [],
   });
 }

@@ -1,8 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itm_connect/models/routine.dart';
+import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/google_sheet_service.dart';
+import 'package:itm_connect/services/teacher_service.dart';
+import 'package:intl/intl.dart';
 
 class RoutineService {
+  static const List<String> classSlots = [
+    "08:30 AM - 10:00 AM",
+    "10:00 AM - 11:30 AM",
+    "11:30 AM - 01:00 PM",
+    "01:30 PM - 03:00 PM",
+    "03:00 PM - 04:30 PM",
+    "04:30 PM - 06:00 PM",
+  ];
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collection = 'routines';
 
@@ -178,5 +190,119 @@ class RoutineService {
     }
 
     await batch.commit();
+  }
+
+  // --- Conflict Detection Logic ---
+
+  /// Parse time string like "10:00 AM" and return minutes since midnight
+  int? _parseTime(String timeStr) {
+    try {
+      final dateFormat = DateFormat('hh:mm a');
+      final time = dateFormat.parse(timeStr.trim());
+      return time.hour * 60 + time.minute;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Parse time range like "10:00 AM - 11:30 AM" and return [startMinutes, endMinutes]
+  List<int>? _parseTimeRange(String timeStr) {
+    try {
+      final parts = timeStr.split('-');
+      if (parts.length != 2) return null;
+      final start = _parseTime(parts[0]);
+      final end = _parseTime(parts[1]);
+      if (start == null || end == null) return null;
+      return [start, end];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if two time ranges overlap
+  bool _timesOverlap(List<int> range1, List<int> range2) {
+    return range1[0] < range2[1] && range2[0] < range1[1];
+  }
+
+  String _getFullDayName(String shortDay) {
+    final Map<String, String> dayMap = {
+      'Sat': 'Saturday',
+      'Sun': 'Sunday',
+      'Mon': 'Monday',
+      'Tue': 'Tuesday',
+      'Wed': 'Wednesday',
+      'Thu': 'Thursday',
+      'Fri': 'Friday',
+    };
+    return dayMap[shortDay] ?? shortDay;
+  }
+
+  /// Comprehensive check for teacher availability
+  /// Checks against all academic routines and the teacher's consulting hours
+  Future<String?> checkTeacherAvailability({
+    required String teacherInitial,
+    required String day,
+    required String timeRange,
+    String? excludeDocId,
+    bool skipConsultingCheck = false,
+  }) async {
+    final newRange = _parseTimeRange(timeRange);
+    if (newRange == null) return "Invalid time format";
+
+    // Normalize day to short form (e.g. "Saturday" -> "Sat")
+    final shortDay = day.length >= 3 
+        ? (day.substring(0, 1).toUpperCase() + day.substring(1, 3).toLowerCase()) 
+        : day;
+
+    // 1. Check all academic routines on the same day
+    // Query for both short ("Sat") and long ("Saturday") formats to be safe
+    final shortDayQuery = await _firestore.collection(_collection).where('day', isEqualTo: shortDay).get();
+    final longDay = _getFullDayName(shortDay);
+    final longDayQuery = await _firestore.collection(_collection).where('day', isEqualTo: longDay).get();
+    
+    // Combine results and deduplicate by doc ID
+    final allDocs = {...shortDayQuery.docs, ...longDayQuery.docs}.toList();
+
+    for (final doc in allDocs) {
+      if (excludeDocId != null && doc.id == excludeDocId) continue;
+      
+      final routine = Routine.fromMap(doc.id, doc.data());
+      for (final routineClass in routine.classes) {
+        if (routineClass.teacherInitial.trim().toUpperCase() == teacherInitial.trim().toUpperCase()) {
+          final existingRange = _parseTimeRange(routineClass.time);
+          if (existingRange != null && _timesOverlap(newRange, existingRange)) {
+            return "Conflict: Teacher already has a class on $day at ${routineClass.time} (Batch: ${routine.batch})";
+          }
+        }
+      }
+    }
+
+    // 2. Check teacher's consulting hours
+    if (!skipConsultingCheck) {
+      final teacherDoc = await _firestore.collection('teachers').doc(teacherInitial).get();
+      if (teacherDoc.exists) {
+        final data = teacherDoc.data()!;
+        final rawConsulting = data['consultingHours'] ?? data['consultingHour'];
+        List<String> consultingSlots = [];
+        if (rawConsulting is List) {
+          consultingSlots = List<String>.from(rawConsulting);
+        } else if (rawConsulting is String && rawConsulting.isNotEmpty) {
+          consultingSlots = [rawConsulting];
+        }
+
+        for (final slot in consultingSlots) {
+          // Slot format expected: "Day TimeRange" e.g., "Sat 10:00 AM - 11:30 AM"
+          if (slot.contains(day)) {
+            final timePart = slot.replaceFirst(day, '').trim();
+            final existingRange = _parseTimeRange(timePart);
+            if (existingRange != null && _timesOverlap(newRange, existingRange)) {
+              return "Conflict: This time overlaps with the teacher's Consulting Hour on $day ($timePart)";
+            }
+          }
+        }
+      }
+    }
+
+    return null; // Available
   }
 }

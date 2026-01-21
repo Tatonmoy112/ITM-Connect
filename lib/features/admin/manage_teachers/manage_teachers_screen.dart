@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:itm_connect/models/teacher.dart';
 import 'package:itm_connect/services/teacher_service.dart';
+import 'package:itm_connect/services/routine_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -250,8 +251,8 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     final nameController = TextEditingController(text: teacher?.name ?? '');
     final emailController = TextEditingController(text: teacher?.email ?? '');
     final roleController = TextEditingController(text: teacher?.role ?? '');
-    final initialController = TextEditingController(text: teacher?.id ?? '');
-    final consultingHourController = TextEditingController(text: teacher?.consultingHour ?? '');
+    final initialController = TextEditingController(text: (teacher?.teacherInitial ?? teacher?.id ?? '').toString().trim());
+    final List<String> consultingSlots = List<String>.from(teacher?.consultingHours ?? []);
     final imageUrlController = TextEditingController(text: teacher?.imageUrl ?? '');
 
     bool showNameError = false;
@@ -260,11 +261,26 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
     bool showInitialError = false;
     String? initialErrorMessage;
     bool isLoading = false;
+    bool hasRefetched = false; // Flag to ensure we fetch fresh data only once
 
     showDialog(
       context: context,
       builder: (_) {
         return StatefulBuilder(builder: (context, setModalState) {
+          // Fetch fresh data immediately when opening edit dialog
+          if (teacher != null && !hasRefetched) {
+            hasRefetched = true;
+            _teacherService.getTeacher(teacher.teacherInitial).then((fresh) {
+              if (fresh != null && context.mounted) {
+                setModalState(() {
+                  consultingSlots.clear();
+                  consultingSlots.addAll(fresh.consultingHours);
+                  print("Refreshed data for ${teacher.teacherInitial}: $consultingSlots");
+                });
+              }
+            });
+          }
+
           final size = MediaQuery.of(context).size;
           final dlgIsMobile = size.width < 600;
           final dlgIsTablet = size.width >= 600 && size.width < 1024;
@@ -408,7 +424,7 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                               ),
                             ),
                             const SizedBox(height: 10),
-                            // Consulting Hour (Interactive)
+                            // Consulting Hours (Multi-slot)
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -417,121 +433,162 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text("Consulting Hours", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  const SizedBox(height: 8),
-                                  // Day Selection Chips
-                                  Wrap(
-                                    spacing: 4,
-                                    runSpacing: 4,
-                                    children: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"].map((day) {
-                                      final isSelected = consultingHourController.text.contains(day);
-                                      return FilterChip(
-                                        label: Text(day, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
-                                        selected: isSelected,
-                                        selectedColor: Colors.teal,
-                                        checkmarkColor: Colors.white,
-                                        backgroundColor: Colors.grey.shade100,
-                                        onSelected: (selected) {
-                                          List<String> currentDays = [];
-                                          // Parse existing days from text
-                                          final fullText = consultingHourController.text;
-                                          // Extract time part if exists (assumes standard format: "Days Time")
-                                          String timePart = "";
-                                          
-                                          // Simple regex to split days and time. 
-                                          // Assuming time starts with a digit. e.g. "Sun, Mon 10..."
-                                          final timeIndex = fullText.indexOf(RegExp(r'\d'));
-                                          if (timeIndex != -1) {
-                                            timePart = fullText.substring(timeIndex).trim();
-                                          }
-
-                                          // Rebuild days list
-                                          final dayList = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
-                                          for (var d in dayList) {
-                                            if (fullText.contains(d) && (selected || d != day)) {
-                                              currentDays.add(d);
-                                            } else if (d == day && selected) {
-                                               currentDays.add(d); 
-                                            }
-                                          }
-                                          // Ensure "day" isn't duplicated if logic above missed it
-                                          if (selected && !currentDays.contains(day)) currentDays.add(day);
-                                          if (!selected && currentDays.contains(day)) currentDays.remove(day);
-
-                                          // Sort days to keep order
-                                          currentDays.sort((a, b) => dayList.indexOf(a).compareTo(dayList.indexOf(b)));
-                                          
-                                          String daysStr = currentDays.join(", ");
-                                          if (timePart.isEmpty) timePart = "10:00 AM - 12:00 PM"; // Default if missing
-                                          
-                                          setModalState(() {
-                                            consultingHourController.text = "$daysStr $timePart";
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  // Time Picker Row
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          consultingHourController.text.isEmpty 
-                                          ? "Select Days & Time" 
-                                          : (consultingHourController.text.contains(RegExp(r'\d')) 
-                                              ? consultingHourController.text.substring(consultingHourController.text.indexOf(RegExp(r'\d'))) 
-                                              : "Select Time"),
-                                          style: const TextStyle(fontWeight: FontWeight.w500),
+                                      const Text("Consulting Hours", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                      if (isLoading || !hasRefetched) 
+                                        const SizedBox(
+                                          width: 16, 
+                                          height: 16, 
+                                          child: CircularProgressIndicator(strokeWidth: 2)
+                                        )
+                                      else
+                                        TextButton.icon(
+                                          icon: const Icon(Icons.add_circle, color: Colors.teal, size: 18),
+                                          label: const Text("Add Slot", style: TextStyle(color: Colors.teal, fontSize: 13)),
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                          onPressed: () {
+                                            print("User clicked Add Slot. Current count: ${consultingSlots.length}");
+                                            setModalState(() {
+                                              consultingSlots.add("Sat 08:30 AM - 10:00 AM");
+                                            });
+                                          },
                                         ),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                           final start = await showTimePicker(
-                                            context: context,
-                                            initialTime: const TimeOfDay(hour: 10, minute: 0),
-                                            helpText: 'START TIME',
-                                          );
-                                          if (start == null) return;
-                                          if (!context.mounted) return;
-
-                                          final end = await showTimePicker(
-                                            context: context,
-                                            initialTime: const TimeOfDay(hour: 12, minute: 0),
-                                            helpText: 'END TIME',
-                                          );
-                                          if (end == null) return;
-                                          if (!context.mounted) return;
-
-                                          final localizations = MaterialLocalizations.of(context);
-                                          final s = localizations.formatTimeOfDay(start, alwaysUse24HourFormat: false);
-                                          final e = localizations.formatTimeOfDay(end, alwaysUse24HourFormat: false);
-                                          
-                                          // Update text preserving days
-                                          String current = consultingHourController.text;
-                                          String daysPart = "";
-                                          final timeIdx = current.indexOf(RegExp(r'\d'));
-                                          if (timeIdx != -1) {
-                                            daysPart = current.substring(0, timeIdx).trim();
-                                          } else {
-                                            daysPart = current.trim(); // Assume all days
-                                          }
-                                          
-                                          setModalState(() {
-                                            consultingHourController.text = "$daysPart $s - $e".trim();
-                                          });
-                                        },
-                                        child: const Text("Change Time"),
-                                      ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  if (consultingSlots.isEmpty)
+                                    const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 10),
+                                        child: Text("No consulting hours added", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                      ),
+                                    ),
+                                  ...consultingSlots.asMap().entries.map((entry) {
+                                    final idx = entry.key;
+                                    final slot = entry.value;
+                                    
+                                    // Parse day and time with robust fallbacks
+                                    String currentDay = "Sat";
+                                    String currentTime = RoutineService.classSlots[0];
+                                    
+                                    final parts = slot.split(' ');
+                                    if (parts.isNotEmpty) {
+                                      final rawDay = parts[0];
+                                      // Normalize legacy full names to short form
+                                      final normalizedDay = rawDay.length >= 3 
+                                          ? (rawDay.substring(0, 1).toUpperCase() + rawDay.substring(1, 3).toLowerCase()) 
+                                          : rawDay;
+                                      
+                                      final allowedDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+                                      if (allowedDays.contains(normalizedDay)) {
+                                        currentDay = normalizedDay;
+                                      }
+
+                                      if (slot.contains('-')) {
+                                         final rawTime = slot.substring(slot.indexOf(RegExp(r'\d'))).trim();
+                                         if (RoutineService.classSlots.contains(rawTime)) {
+                                           currentTime = rawTime;
+                                         }
+                                      }
+                                    }
+
+                                    return Container(
+                                      key: ValueKey("${slot}_$idx"),
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              // Day Dropdown
+                                              Expanded(
+                                                flex: 2,
+                                                child: DropdownButton<String>(
+                                                  value: currentDay,
+                                                  isExpanded: true,
+                                                  underline: const SizedBox(),
+                                                  items: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((d) {
+                                                    return DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 13)));
+                                                  }).toList(),
+                                                  onChanged: (val) {
+                                                    if (val != null) {
+                                                      setModalState(() {
+                                                        consultingSlots[idx] = "$val $currentTime";
+                                                      });
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              // Time Slot Dropdown
+                                              Expanded(
+                                                flex: 5,
+                                                child: DropdownButton<String>(
+                                                  value: RoutineService.classSlots.contains(currentTime) ? currentTime : RoutineService.classSlots[0],
+                                                  isExpanded: true,
+                                                  underline: const SizedBox(),
+                                                  items: RoutineService.classSlots.map((s) {
+                                                    return DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)));
+                                                  }).toList(),
+                                                  onChanged: (val) async {
+                                                    if (val != null) {
+                                                      // 1. Update list IMMEDIATELY (sync)
+                                                      setModalState(() {
+                                                        consultingSlots[idx] = "$currentDay $val";
+                                                      });
+
+                                                      // 2. Then check for conflicts (async)
+                                                      final initial = initialController.text.trim().toUpperCase();
+                                                      if (initial.isNotEmpty) {
+                                                        final conflict = await RoutineService().checkTeacherAvailability(
+                                                          teacherInitial: initial,
+                                                          day: _getFullDayName(currentDay),
+                                                          timeRange: val,
+                                                          skipConsultingCheck: true, // Don't check against self
+                                                        );
+                                                        
+                                                        if (conflict != null) {
+                                                          if (context.mounted) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                              SnackBar(content: Text(conflict), backgroundColor: Colors.orange),
+                                                            );
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                                                onPressed: () {
+                                                  setModalState(() {
+                                                    consultingSlots.removeAt(idx);
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
                                 ],
                               ),
                             ),
+
                             const SizedBox(height: 12),
                             // Photo Upload Section
                             Column(
@@ -673,7 +730,6 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                                   final email = emailController.text.trim();
                                   final role = roleController.text.trim();
                                   final initial = initialController.text.trim().toUpperCase();
-                                  final consultingHour = consultingHourController.text.trim();
                                   final imageUrl = imageUrlController.text.trim();
 
                                   setModalState(() {
@@ -883,13 +939,14 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                           return;
                         }
 
+                        print('ManageTeachersScreen: Saving teacher with slots: $consultingSlots');
                         await _teacherService.addOrUpdateTeacher(
                           teacherInitial: initial,
                           name: name,
                           email: email,
                           role: role,
                           imageUrl: imageUrl,
-                          consultingHour: consultingHour,
+                          consultingHours: consultingSlots,
                         );
                         if (mounted) {
                           Navigator.pop(context);
@@ -1276,6 +1333,67 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Consulting Hours Section
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.access_time_filled, size: 18, color: Colors.amber.shade700),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Consulting Hours',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (teacher.consultingHours.isEmpty)
+                            const Text(
+                              'Not set',
+                              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                            )
+                          else
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: teacher.consultingHours.map((slot) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                                  ),
+                                  child: Text(
+                                    slot,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.amber.shade900,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                         ],
                       ),
                     ),
@@ -2014,5 +2132,18 @@ class _ManageTeacherScreenState extends State<ManageTeacherScreen>
         ],
       ),
     );
+  }
+
+  String _getFullDayName(String shortDay) {
+    switch (shortDay) {
+      case 'Sat': return 'Saturday';
+      case 'Sun': return 'Sunday';
+      case 'Mon': return 'Monday';
+      case 'Tue': return 'Tuesday';
+      case 'Wed': return 'Wednesday';
+      case 'Thu': return 'Thursday';
+      case 'Fri': return 'Friday';
+      default: return shortDay;
+    }
   }
 }
