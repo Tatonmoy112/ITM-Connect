@@ -1,0 +1,33 @@
+﻿# Flutter / Dart
+.dart_tool/
+.buildlog/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.sdk/
+
+# Generated plugin registrants
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.m
+
+# Firebase (DO NOT COMMIT)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Others
+pubspec.lock
+
+# Security
+lib/secrets.dart
+assets/itm-connect-credentials.json
